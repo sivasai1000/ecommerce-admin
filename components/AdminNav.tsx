@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LayoutDashboard, Package, ShoppingCart, Users, FileText } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingCart, Users, Tags, FileText, Megaphone, HelpCircle, BookOpen, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -14,12 +14,19 @@ export default function AdminNav({ onLinkClick }: AdminNavProps) {
     const pathname = usePathname();
 
     const links = [
-        { href: "/", label: "Overview", icon: LayoutDashboard },
+        { href: "/", label: "Dashboard", icon: LayoutDashboard },
         { href: "/products", label: "Products", icon: Package },
         { href: "/orders", label: "Orders", icon: ShoppingCart },
         { href: "/users", label: "Users", icon: Users },
-        { href: "/coupons", label: "Coupons", icon: FileText },
+        { href: "/coupons", label: "Coupons", icon: Tags },
         { href: "/blogs", label: "Blogs", icon: FileText },
+        { href: "/reviews", label: "Reviews", icon: MessageSquare },
+        { href: "/marketing", label: "Marketing", icon: Megaphone },
+        { href: "/faqs", label: "FAQs", icon: HelpCircle },
+        { href: "/contact", label: "Contact", icon: Megaphone },
+        { href: "/privacy", label: "Privacy", icon: BookOpen },
+        { href: "/shipping", label: "Shipping", icon: Package },
+        { href: "/terms", label: "Terms", icon: FileText },
     ];
 
     const handleLogout = () => {

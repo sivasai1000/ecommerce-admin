@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trash2, Plus } from "lucide-react";
+import Link from "next/link";
 import {
     Dialog,
     DialogContent,
@@ -109,6 +110,11 @@ export default function CouponsPage() {
                             <Plus className="mr-2 h-4 w-4" /> Add Coupon
                         </Button>
                     </DialogTrigger>
+                    <Link href="/coupons/trash">
+                        <Button variant="outline" className="ml-2 text-red-500 hover:text-red-600 border-red-200">
+                            View Trash
+                        </Button>
+                    </Link>
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>Add New Coupon</DialogTitle>

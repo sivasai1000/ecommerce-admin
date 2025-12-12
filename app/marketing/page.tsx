@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trash, Loader2, Plus, Upload } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 
 interface Banner {
     id: number;
@@ -207,8 +208,17 @@ export default function MarketingPage() {
                     {/* Create Banner */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Add New Banner</CardTitle>
-                            <CardDescription>Upload a new slide for the homepage hero section.</CardDescription>
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <CardTitle>Add New Banner</CardTitle>
+                                    <CardDescription>Upload a new slide for the homepage hero section.</CardDescription>
+                                </div>
+                                <Link href="/marketing/trash">
+                                    <Button variant="outline" className="text-red-500 hover:text-red-600 border-red-200">
+                                        View Trash
+                                    </Button>
+                                </Link>
+                            </div>
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={handleCreateBanner} className="grid gap-4 md:grid-cols-2 items-end">

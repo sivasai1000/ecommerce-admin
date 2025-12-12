@@ -89,6 +89,11 @@ export default function AdminProductsPage() {
                         <Plus className="mr-2 h-4 w-4" /> Add Product
                     </Button>
                 </Link>
+                <Link href="/products/trash">
+                    <Button variant="outline" className="ml-2 text-red-500 hover:text-red-600 border-red-200">
+                        View Trash
+                    </Button>
+                </Link>
             </div>
 
             <div className="rounded-md border bg-white dark:bg-gray-800">

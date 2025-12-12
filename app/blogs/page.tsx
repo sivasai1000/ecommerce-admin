@@ -65,6 +65,11 @@ export default function BlogsPage() {
                         Create New Blog
                     </Button>
                 </Link>
+                <Link href="/blogs/trash">
+                    <Button variant="outline" className="ml-2 text-red-500 hover:text-red-600 border-red-200">
+                        View Trash
+                    </Button>
+                </Link>
             </div>
 
             <Card>

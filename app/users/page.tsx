@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import {
     Table,
     TableBody,
@@ -67,8 +68,13 @@ export default function UsersPage() {
         <div className="space-y-6">
             <h1 className="text-3xl font-bold tracking-tight">Users Management</h1>
             <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Registered Users</CardTitle>
+                    <Button variant="outline" asChild className="text-red-500 hover:text-red-600 hover:bg-red-50">
+                        <Link href="/users/trash">
+                            View Trash
+                        </Link>
+                    </Button>
                 </CardHeader>
                 <CardContent>
                     {loading ? (

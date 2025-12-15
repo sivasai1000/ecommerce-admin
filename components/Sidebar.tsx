@@ -2,7 +2,7 @@
 
 "use client";
 
-import { LayoutDashboard, Package, ShoppingCart, Users, Tags, FileText, Megaphone, HelpCircle, BookOpen, MessageSquare } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingCart, Users, Tags, FileText, Megaphone, HelpCircle, BookOpen, MessageSquare, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -19,6 +19,7 @@ const navItems = [
     { name: "Contact", href: "/contact", icon: Megaphone },
     { name: "Privacy", href: "/privacy", icon: BookOpen },
     { name: "Shipping", href: "/shipping", icon: Package },
+    { name: "Chat", href: "/chat", icon: MessageCircle },
     { name: "Terms", href: "/terms", icon: FileText },
 ];
 

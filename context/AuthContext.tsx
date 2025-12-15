@@ -15,6 +15,7 @@ interface AuthContextType {
     token: string | null;
     logout: () => void;
     isLoading: boolean;
+    apiCall: (url: string, options?: RequestInit) => Promise<Response | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -51,13 +52,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         router.push("/login");
     };
 
+    const apiCall = async (url: string, options: RequestInit = {}) => {
+        const headers: any = {
+            "Content-Type": "application/json",
+            ...options.headers,
+        };
+
+        const currentToken = localStorage.getItem("token");
+        if (currentToken) {
+            headers["Authorization"] = `Bearer ${currentToken}`;
+        }
+
+        try {
+            const res = await fetch(url, { ...options, headers });
+
+            if (res.status === 401 || res.status === 403) {
+                logout();
+                return null;
+            }
+            return res;
+        } catch (error) {
+            console.error("API Call failed", error);
+            throw error;
+        }
+    };
+
     return (
         <AuthContext.Provider
             value={{
                 user,
                 token,
                 logout,
-                isLoading
+                isLoading,
+                apiCall
             }}
         >
             {children}

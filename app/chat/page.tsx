@@ -28,7 +28,7 @@ interface Message {
 }
 
 export default function ChatPage() {
-    const { token } = useAuth();
+    const { token, apiCall } = useAuth();
     const [conversations, setConversations] = useState<ChatUser[]>([]);
     const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -39,11 +39,9 @@ export default function ChatPage() {
     const fetchConversations = async () => {
         if (!token) return;
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/chat/conversations`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            const data = await res.json();
-            if (res.ok) {
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/chat/conversations`);
+            if (res && res.ok) {
+                const data = await res.json();
                 setConversations(data.data);
             }
         } catch (error) {
@@ -62,11 +60,9 @@ export default function ChatPage() {
     const fetchMessages = async (userId: number) => {
         if (!token) return;
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/chat/history/${userId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            const data = await res.json();
-            if (res.ok) {
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/chat/history/${userId}`);
+            if (res && res.ok) {
+                const data = await res.json();
                 setMessages(data.data);
             }
         } catch (error) {
@@ -95,19 +91,15 @@ export default function ChatPage() {
         setNewMessage("");
 
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/chat/send`, {
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/chat/send`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
                 body: JSON.stringify({
                     message: tempMessage,
                     receiverId: selectedUser.id,
                 }),
             });
 
-            if (res.ok) {
+            if (res && res.ok) {
                 fetchMessages(selectedUser.id);
             } else {
                 toast.error("Failed to send message");

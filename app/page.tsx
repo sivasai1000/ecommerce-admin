@@ -50,7 +50,7 @@ export default function AdminDashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.totalRevenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">₹{stats.totalRevenue.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">Lifetime revenue</p>
           </CardContent>
         </Card>
@@ -108,7 +108,7 @@ export default function AdminDashboard() {
                       <p className="text-sm font-medium leading-none">Order #{order.id}</p>
                       <p className="text-sm text-muted-foreground">User: {order.User?.name || 'Guest'}</p>
                     </div>
-                    <div className="ml-auto font-medium">+${parseFloat(order.totalAmount).toFixed(2)}</div>
+                    <div className="ml-auto font-medium">+₹{parseFloat(order.totalAmount).toFixed(2)}</div>
                   </div>
                 ))
               ) : (

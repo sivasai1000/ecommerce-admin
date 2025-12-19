@@ -125,7 +125,7 @@ export default function AdminProductsPage() {
                                 </TableCell>
                                 <TableCell className="font-medium">{product.name}</TableCell>
                                 <TableCell>{product.category}</TableCell>
-                                <TableCell>${product.price}</TableCell>
+                                <TableCell>₹{product.price}</TableCell>
                                 <TableCell>{product.stock}</TableCell>
                                 <TableCell>
                                     {product.subcategory || '-'}

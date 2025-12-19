@@ -62,7 +62,7 @@ export default function ProductsTrashPage() {
             ) : "No Image"
         },
         { header: "Name", accessorKey: "name" },
-        { header: "Price", accessorKey: "price", cell: (item: any) => `$${item.price}` },
+        { header: "Price", accessorKey: "price", cell: (item: any) => `₹${item.price}` },
         { header: "Category", accessorKey: "category" },
         {
             header: "Deleted At",

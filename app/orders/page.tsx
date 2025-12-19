@@ -69,7 +69,7 @@ export default function OrdersPage() {
                                         <TableRow key={order.id}>
                                             <TableCell>#{order.id}</TableCell>
                                             <TableCell>{order.User?.name || 'Guest'}</TableCell>
-                                            <TableCell>${parseFloat(order.totalAmount).toFixed(2)}</TableCell>
+                                            <TableCell>₹{parseFloat(order.totalAmount).toFixed(2)}</TableCell>
                                             <TableCell className="capitalize">{order.status}</TableCell>
                                             <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
                                         </TableRow>

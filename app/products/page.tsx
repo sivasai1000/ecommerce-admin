@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Filter } from "lucide-react";
 import {
     Table,
     TableBody,
@@ -12,6 +12,14 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -41,6 +49,7 @@ interface Product {
 export default function AdminProductsPage() {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
     useEffect(() => {
         fetchProducts();
@@ -48,7 +57,7 @@ export default function AdminProductsPage() {
 
     const fetchProducts = async () => {
         try {
-            const token = localStorage.getItem("token") || localStorage.getItem("adminToken");
+            const token = localStorage.getItem("adminToken");
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -63,7 +72,7 @@ export default function AdminProductsPage() {
 
     const handleDelete = async (id: number) => {
         try {
-            const token = localStorage.getItem("token") || localStorage.getItem("adminToken");
+            const token = localStorage.getItem("adminToken");
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products/${id}`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` }
@@ -78,91 +87,167 @@ export default function AdminProductsPage() {
         }
     };
 
-    if (loading) return <div>Loading...</div>;
+    const getFirstImage = (product: Product) => {
+        if (product.imageUrl) {
+            try {
+                if (product.imageUrl.startsWith('[') || product.imageUrl.startsWith('{')) {
+                    const parsed = JSON.parse(product.imageUrl);
+                    if (Array.isArray(parsed) && parsed.length > 0) return parsed[0];
+                    return null;
+                }
+                return product.imageUrl;
+            } catch (e) {
+                return product.imageUrl;
+            }
+        }
+        return null;
+    };
+
+    if (loading) return (
+        <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
+        </div>
+    );
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold tracking-tight">Products</h1>
-                <Link href="/products/new">
-                    <Button>
-                        <Plus className="mr-2 h-4 w-4" /> Add Product
-                    </Button>
-                </Link>
-                <Link href="/products/trash">
-                    <Button variant="outline" className="ml-2 text-red-500 hover:text-red-600 border-red-200">
-                        View Trash
-                    </Button>
-                </Link>
+        <div className="space-y-8 animate-in fade-in-50">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Products</h1>
+                    <p className="text-gray-500 dark:text-gray-400 mt-1">
+                        Manage your product catalog, inventory, and pricing.
+                    </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                        <SelectTrigger className="w-full sm:w-[180px]">
+                            <Filter className="mr-2 h-4 w-4 text-muted-foreground" />
+                            <SelectValue placeholder="Filter by Category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Categories</SelectItem>
+                            {Array.from(new Set(products.map(p => p.category).filter(Boolean))).map((cat) => (
+                                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+
+                    <Link href="/products/trash">
+                        <Button variant="outline" className="w-full sm:w-auto text-red-500 hover:text-red-600 border-red-200">
+                            <Trash2 className="mr-2 h-4 w-4" /> Trash
+                        </Button>
+                    </Link>
+                    <Link href="/products/new">
+                        <Button className="w-full sm:w-auto">
+                            <Plus className="mr-2 h-4 w-4" /> Add Product
+                        </Button>
+                    </Link>
+                </div>
             </div>
 
-            <div className="rounded-md border bg-white dark:bg-gray-800">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Image</TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Category</TableHead>
-                            <TableHead>Price</TableHead>
-                            <TableHead>Stock</TableHead>
-                            <TableHead>Subcategory</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {products.map((product) => (
-                            <TableRow key={product.id}>
-                                <TableCell>
-                                    <div className="h-10 w-10 overflow-hidden rounded-md border bg-muted">
-                                        {product.imageUrl && (
-                                            <img
-                                                src={product.imageUrl}
-                                                alt={product.name}
-                                                className="h-full w-full object-cover"
-                                            />
-                                        )}
-                                    </div>
-                                </TableCell>
-                                <TableCell className="font-medium">{product.name}</TableCell>
-                                <TableCell>{product.category}</TableCell>
-                                <TableCell>₹{product.price}</TableCell>
-                                <TableCell>{product.stock}</TableCell>
-                                <TableCell>
-                                    {product.subcategory || '-'}
-                                </TableCell>
-                                <TableCell className="text-right space-x-2">
-                                    <Link href={`/products/${product.id}/edit`}>
-                                        <Button variant="ghost" size="icon">
-                                            <Pencil className="h-4 w-4" />
-                                        </Button>
-                                    </Link>
-
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600">
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    This action cannot be undone. This will permanently delete the product.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDelete(product.id)} className="bg-red-500 hover:bg-red-600">
-                                                    Delete
-                                                </AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                </TableCell>
+            <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader className="bg-gray-50 dark:bg-gray-900/50">
+                            <TableRow>
+                                <TableHead className="w-[80px]">Image</TableHead>
+                                <TableHead className="min-w-[150px]">Name</TableHead>
+                                <TableHead className="min-w-[100px]">Category</TableHead>
+                                <TableHead className="min-w-[100px]">Subcategory</TableHead>
+                                <TableHead>Price</TableHead>
+                                <TableHead>Stock</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {products.filter(p => selectedCategory === "all" || p.category === selectedCategory).length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={7} className="h-24 text-center text-gray-500">
+                                        No products found.
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                products.filter(p => selectedCategory === "all" || p.category === selectedCategory).map((product) => {
+                                    const image = getFirstImage(product);
+                                    return (
+                                        <TableRow key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                            <TableCell>
+                                                <div className="h-10 w-10 overflow-hidden rounded-lg border bg-gray-100 dark:bg-gray-800">
+                                                    {image ? (
+                                                        <img
+                                                            src={image}
+                                                            alt={product.name}
+                                                            className="h-full w-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="h-full w-full flex items-center justify-center text-gray-400">
+                                                            <div className="h-4 w-4 bg-gray-300 rounded-full" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <span className="font-medium text-gray-900 dark:text-gray-100">{product.name}</span>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-900">
+                                                    {product.category}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-gray-500">
+                                                {product.subcategory || '-'}
+                                            </TableCell>
+                                            <TableCell className="font-medium">
+                                                ₹{parseFloat(product.price).toFixed(2)}
+                                            </TableCell>
+                                            <TableCell>
+                                                <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${product.stock > 10
+                                                    ? 'bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-400/10 dark:text-green-400'
+                                                    : product.stock > 0
+                                                        ? 'bg-yellow-50 text-yellow-800 ring-yellow-600/20 dark:bg-yellow-400/10 dark:text-yellow-400'
+                                                        : 'bg-red-50 text-red-700 ring-red-600/10 dark:bg-red-400/10 dark:text-red-400'
+                                                    }`}>
+                                                    {product.stock}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Link href={`/products/${product.id}/edit`}>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-blue-600">
+                                                            <Pencil className="h-4 w-4" />
+                                                        </Button>
+                                                    </Link>
+
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-red-600 text-gray-500">
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Delete Product?</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    Are you sure you want to delete "{product.name}"? This action cannot be undone.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleDelete(product.id)} className="bg-red-500 hover:bg-red-600">
+                                                                    Delete
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             </div>
         </div>
     );

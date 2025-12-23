@@ -35,8 +35,8 @@ export default function LoginPage() {
             if (res.ok) {
                 // Determine if user is admin
                 if (data.user.role === 'admin' || data.user.role === 'Admin') {
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('user', JSON.stringify(data.user));
+                    localStorage.setItem('adminToken', data.token);
+                    localStorage.setItem('adminUser', JSON.stringify(data.user));
                     alert("Login Successful");
                     router.push("/");
                 } else {

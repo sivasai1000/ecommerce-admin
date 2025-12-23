@@ -6,16 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, X, Upload } from "lucide-react";
 import {
     Select,
     SelectContent,
+    SelectGroup,
     SelectItem,
     SelectTrigger,
     SelectValue,
-    SelectGroup,
-    SelectLabel,
 } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Upload, X } from "lucide-react";
 
 interface ProductFormData {
     name: string;
@@ -24,16 +25,16 @@ interface ProductFormData {
     category: string;
     subcategory: string;
     imageUrl: string;
-    images?: string[]; // Add images array to state
+    images: string[];
     stock: string;
     mrp: string;
-    discount?: string;
+    discount: string;
 }
 
 interface ProductFormProps {
-    initialData?: ProductFormData;
+    initialData?: any;
     isEditing?: boolean;
-    productId?: number;
+    productId?: string;
 }
 
 interface CategoryData {
@@ -42,6 +43,7 @@ interface CategoryData {
 }
 
 export default function ProductForm({ initialData, isEditing, productId }: ProductFormProps) {
+    // ... (Keep existing hooks and state: router, loading, formData, useEffects, handlers)
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState<ProductFormData>(
@@ -59,14 +61,20 @@ export default function ProductForm({ initialData, isEditing, productId }: Produ
         }
     );
 
+    // ... (Keep useEffects for initialData and categories)
     useEffect(() => {
-        if (initialData?.imageUrl) {
+        let initialSlots: (string | null)[] = [null, null, null, null];
+
+        if (initialData?.images && initialData.images.length > 0) {
+            initialData.images.forEach((url: string, idx: number) => {
+                if (idx < 4) initialSlots[idx] = url;
+            });
+        } else if (initialData?.imageUrl) {
             try {
-                let initialSlots: (string | null)[] = [null, null, null, null];
                 if (initialData.imageUrl.startsWith('[') || initialData.imageUrl.startsWith('{')) {
                     const parsed = JSON.parse(initialData.imageUrl);
                     if (Array.isArray(parsed)) {
-                        parsed.forEach((url, idx) => {
+                        parsed.forEach((url: string, idx: number) => {
                             if (idx < 4) initialSlots[idx] = url;
                         });
                     } else if (parsed) {
@@ -75,11 +83,11 @@ export default function ProductForm({ initialData, isEditing, productId }: Produ
                 } else {
                     initialSlots[0] = initialData.imageUrl;
                 }
-                setImageSlots(initialSlots);
             } catch (e) {
-                setImageSlots([initialData.imageUrl, null, null, null]);
+                initialSlots[0] = initialData.imageUrl;
             }
         }
+        setImageSlots(initialSlots);
     }, [initialData]);
 
     const [imageSlots, setImageSlots] = useState<(string | File | null)[]>([null, null, null, null]);
@@ -90,7 +98,7 @@ export default function ProductForm({ initialData, isEditing, productId }: Produ
     useEffect(() => {
         const fetchCategories = async () => {
             try {
-                const token = localStorage.getItem("token") || localStorage.getItem("adminToken");
+                const token = localStorage.getItem("adminToken");
                 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products/categories`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
@@ -98,15 +106,12 @@ export default function ProductForm({ initialData, isEditing, productId }: Produ
                     const data = await res.json();
                     let validCategories: CategoryData[] = [];
                     if (Array.isArray(data)) {
-                        // Check if data is array of strings (Old/Remote Backend) OR array of objects (New Local Backend)
                         const isStringArray = data.length > 0 && typeof data[0] === 'string';
-
                         if (isStringArray) {
                             validCategories = data
                                 .filter((c: any) => typeof c === 'string' && c.trim() !== '')
                                 .map((c: string) => ({ name: c, subcategories: [] }));
                         } else {
-                            // Assume object format { name, subcategories }
                             validCategories = data.filter((c: any) => c && typeof c.name === 'string' && c.name.trim() !== '');
                         }
                     }
@@ -121,23 +126,18 @@ export default function ProductForm({ initialData, isEditing, productId }: Produ
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
-
         setFormData((prev) => {
             const updated = { ...prev, [name]: value };
-
-            // Auto-calculate price if MRP or Discount changes
             if (name === 'mrp' || name === 'discount') {
                 const mrp = parseFloat(name === 'mrp' ? value : prev.mrp) || 0;
                 const discount = parseFloat(name === 'discount' ? value : (prev.discount || "0")) || 0;
-
                 if (mrp > 0) {
                     const calculatedPrice = mrp * (1 - discount / 100);
                     updated.price = calculatedPrice.toFixed(2);
                 } else {
-                    updated.price = ""; // Reset price if MRP is cleared
+                    updated.price = "";
                 }
             }
-
             return updated;
         });
     };
@@ -178,7 +178,6 @@ export default function ProductForm({ initialData, isEditing, productId }: Produ
             submitFormData.append('subcategory', formData.subcategory);
             submitFormData.append('discount', formData.discount || "0");
 
-            // Handle Image Slots
             const imageOrder: (string | null)[] = [];
             imageSlots.forEach(slot => {
                 if (slot instanceof File) {
@@ -192,7 +191,7 @@ export default function ProductForm({ initialData, isEditing, productId }: Produ
             });
             submitFormData.append('imageOrder', JSON.stringify(imageOrder));
 
-            const token = localStorage.getItem("token") || localStorage.getItem("adminToken");
+            const token = localStorage.getItem("adminToken");
             const response = await fetch(url, {
                 method,
                 headers: {
@@ -220,230 +219,263 @@ export default function ProductForm({ initialData, isEditing, productId }: Produ
     const availableSubcategories = selectedCategoryData ? selectedCategoryData.subcategories : [];
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
-            <div className="space-y-2">
-                <Label htmlFor="name">Product Name</Label>
-                <Input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                />
-            </div>
-
-            <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                    id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    rows={4}
-                />
-            </div>
-
-            <div className="grid grid-cols-4 gap-4">
-                <div className="space-y-2">
-                    <Label htmlFor="mrp">MRP ($)</Label>
-                    <Input
-                        id="mrp"
-                        name="mrp"
-                        type="number"
-                        step="0.01"
-                        value={formData.mrp}
-                        onChange={handleChange}
-                        placeholder="Original Price"
-                        required
-                    />
+        <form onSubmit={handleSubmit} className="space-y-8 animate-in fade-in-50">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+                        {isEditing ? "Edit Product" : "Create Product"}
+                    </h1>
+                    <p className="text-gray-500 text-sm mt-1">
+                        {isEditing ? "Update product details and inventory." : "Add a new product to your catalog."}
+                    </p>
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="price">Selling Price ($)</Label>
-                    <Input
-                        id="price"
-                        name="price"
-                        type="number"
-                        step="0.01"
-                        value={formData.price}
-                        onChange={handleChange}
-                        required
-                    />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="stock">Stock</Label>
-                    <Input
-                        id="stock"
-                        name="stock"
-                        type="number"
-                        value={formData.stock}
-                        onChange={handleChange}
-                    />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="discount">Discount (%)</Label>
-                    <Input
-                        id="discount"
-                        name="discount"
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={formData.discount}
-                        onChange={handleChange}
-                    />
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" type="button" onClick={() => router.back()}>
+                        Discard
+                    </Button>
+                    <Button type="submit" disabled={loading}>
+                        {loading ? "Saving..." : isEditing ? "Save Changes" : "Publish Product"}
+                    </Button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <Label htmlFor="category">Category</Label>
-                    {!isNewCategory ? (
-                        <Select
-                            onValueChange={(value) => {
-                                if (value === "new") {
-                                    setIsNewCategory(true);
-                                    setFormData((prev) => ({ ...prev, category: "", subcategory: "" }));
-                                    setIsNewSubcategory(true);
-                                } else {
-                                    setIsNewCategory(false);
-                                    setFormData((prev) => ({ ...prev, category: value, subcategory: "" }));
-                                    setIsNewSubcategory(false);
-                                }
-                            }}
-                            value={formData.category && categories.some(c => c.name === formData.category) ? formData.category : undefined}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {categories.map((cat, index) => (
-                                    <SelectItem key={`${cat.name}-${index}`} value={cat.name}>
-                                        {cat.name}
-                                    </SelectItem>
-                                ))}
-                                <SelectItem value="new">+ Add New Category</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    ) : (
-                        <div className="flex gap-2">
-                            <Input
-                                id="category"
-                                name="category"
-                                value={formData.category}
-                                onChange={handleChange}
-                                placeholder="Enter new category name"
-                                required
-                                autoFocus
-                            />
-                            <Button type="button" variant="ghost" onClick={() => setIsNewCategory(false)}>
-                                Cancel
-                            </Button>
-                        </div>
-                    )}
+            <div className="grid gap-8 lg:grid-cols-3">
+                {/* Left Column - Main Details */}
+                <div className="lg:col-span-2 space-y-8">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Basic Details</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="name">Product Name</Label>
+                                <Input
+                                    id="name"
+                                    name="name"
+                                    value={formData.name}
+                                    onChange={handleChange}
+                                    placeholder="e.g. Classic White T-Shirt"
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="description">Description</Label>
+                                <Textarea
+                                    id="description"
+                                    name="description"
+                                    value={formData.description}
+                                    onChange={handleChange}
+                                    placeholder="Product description..."
+                                    rows={6}
+                                    className="resize-none"
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Pricing & Inventory</CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid gap-6 sm:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="mrp">MRP ($)</Label>
+                                <Input
+                                    id="mrp"
+                                    name="mrp"
+                                    type="number"
+                                    step="0.01"
+                                    value={formData.mrp}
+                                    onChange={handleChange}
+                                    placeholder="0.00"
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="discount">Discount (%)</Label>
+                                <Input
+                                    id="discount"
+                                    name="discount"
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    value={formData.discount}
+                                    onChange={handleChange}
+                                    placeholder="0"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="price">Selling Price ($)</Label>
+                                <Input
+                                    id="price"
+                                    name="price"
+                                    type="number"
+                                    step="0.01"
+                                    value={formData.price}
+                                    onChange={handleChange}
+                                    placeholder="Calculated automatically"
+                                    readOnly
+                                    className="bg-gray-50 font-medium"
+                                />
+                                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Auto-calculated</p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="stock">Stock</Label>
+                                <Input
+                                    id="stock"
+                                    name="stock"
+                                    type="number"
+                                    value={formData.stock}
+                                    onChange={handleChange}
+                                    placeholder="0"
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
 
-                <div className="space-y-2">
-                    <Label htmlFor="subcategory">Subcategory</Label>
-                    {!isNewSubcategory ? (
-                        <Select
-                            onValueChange={(value) => {
-                                if (value === "new") {
-                                    setIsNewSubcategory(true);
-                                    setFormData((prev) => ({ ...prev, subcategory: "" }));
-                                } else {
-                                    setFormData((prev) => ({ ...prev, subcategory: value }));
-                                }
-                            }}
-                            value={formData.subcategory && availableSubcategories.includes(formData.subcategory) ? formData.subcategory : undefined}
-                            disabled={!formData.category} // Keep disabled if no category selected
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder={availableSubcategories.length > 0 ? "Select a subcategory" : "No existing subcategories"} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectLabel>Available Subcategories</SelectLabel>
-                                    {availableSubcategories.length > 0 ? (
-                                        availableSubcategories.map((sub, index) => (
-                                            <SelectItem key={`${sub}-${index}`} value={sub}>
-                                                {sub}
-                                            </SelectItem>
-                                        ))
-                                    ) : (
-                                        <div className="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none text-muted-foreground italic">
-                                            No recent items found
-                                        </div>
-                                    )}
-                                </SelectGroup>
-                                <div className="h-px bg-muted my-1" /> {/* Manual separator or use SelectSeparator */}
-                                <SelectGroup>
-                                    <SelectItem value="new" className="text-blue-600 dark:text-blue-400 font-medium">
-                                        + Add New Subcategory
-                                    </SelectItem>
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                    ) : (
-                        <div className="flex gap-2">
-                            <Input
-                                id="subcategory"
-                                name="subcategory"
-                                value={formData.subcategory}
-                                onChange={handleChange}
-                                placeholder="Enter subcategory name"
-                                disabled={!formData.category}
-                            />
-                            <Button type="button" variant="ghost" onClick={() => setIsNewSubcategory(false)}>
-                                Cancel
-                            </Button>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            <div className="space-y-4">
-                <Label>Product Images (Max 4)</Label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {imageSlots.map((slot, index) => (
-                        <div key={index} className="relative aspect-square border-2 border-dashed border-gray-300 rounded-lg overflow-hidden hover:border-gray-400 transition-colors bg-gray-50 dark:bg-gray-800">
-                            {slot ? (
-                                <>
-                                    <img
-                                        src={slot instanceof File ? URL.createObjectURL(slot) : slot}
-                                        alt={`Product ${index + 1}`}
-                                        className="w-full h-full object-cover"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => handleRemoveImage(index)}
-                                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-sm"
+                {/* Right Column - Organization & Media */}
+                <div className="space-y-8">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Organization</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="category">Category</Label>
+                                {!isNewCategory ? (
+                                    <Select
+                                        onValueChange={(value) => {
+                                            if (value === "new") {
+                                                setIsNewCategory(true);
+                                                setFormData((prev) => ({ ...prev, category: "", subcategory: "" }));
+                                                setIsNewSubcategory(true);
+                                            } else {
+                                                setIsNewCategory(false);
+                                                setFormData((prev) => ({ ...prev, category: value, subcategory: "" }));
+                                                setIsNewSubcategory(false);
+                                            }
+                                        }}
+                                        value={formData.category && categories.some(c => c.name === formData.category) ? formData.category : undefined}
                                     >
-                                        <X size={14} />
-                                    </button>
-                                </>
-                            ) : (
-                                <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer text-gray-400 hover:text-gray-600">
-                                    <Plus className="w-8 h-8 mb-2 opacity-50" />
-                                    <span className="text-xs font-medium uppercase tracking-wider">Upload</span>
-                                    <input
-                                        type="file"
-                                        className="hidden"
-                                        accept="image/*"
-                                        onChange={(e) => handleFileSelect(index, e)}
-                                    />
-                                </label>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            </div>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select Category" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectGroup>
+                                                {categories.map((cat, index) => (
+                                                    <SelectItem key={`${cat.name}-${index}`} value={cat.name}>
+                                                        {cat.name}
+                                                    </SelectItem>
+                                                ))}
+                                                <SelectItem value="new" className="text-blue-600 font-medium">+ New Category</SelectItem>
+                                            </SelectGroup>
+                                        </SelectContent>
+                                    </Select>
+                                ) : (
+                                    <div className="space-y-2 animate-in slide-in-from-top-2">
+                                        <Input
+                                            value={formData.category}
+                                            onChange={handleChange}
+                                            name="category"
+                                            placeholder="New Category Name"
+                                            autoFocus
+                                        />
+                                        <Button size="sm" variant="ghost" className="w-full text-xs" onClick={() => setIsNewCategory(false)}>
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
 
-            <div className="flex justify-end space-x-4">
-                <Button variant="outline" type="button" onClick={() => router.back()}>
-                    Cancel
-                </Button>
-                <Button type="submit" disabled={loading}>
-                    {loading ? "Saving..." : isEditing ? "Update Product" : "Create Product"}
-                </Button>
+                            <div className="space-y-2">
+                                <Label htmlFor="subcategory">Subcategory</Label>
+                                {!isNewSubcategory ? (
+                                    <Select
+                                        onValueChange={(value) => {
+                                            if (value === "new") {
+                                                setIsNewSubcategory(true);
+                                                setFormData((prev) => ({ ...prev, subcategory: "" }));
+                                            } else {
+                                                setFormData((prev) => ({ ...prev, subcategory: value }));
+                                            }
+                                        }}
+                                        value={formData.subcategory && availableSubcategories.includes(formData.subcategory) ? formData.subcategory : undefined}
+                                        disabled={!formData.category}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select Subcategory" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {availableSubcategories.map((sub, index) => (
+                                                <SelectItem key={`${sub}-${index}`} value={sub}>
+                                                    {sub}
+                                                </SelectItem>
+                                            ))}
+                                            <SelectItem value="new" className="text-blue-600 font-medium">+ New Subcategory</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                ) : (
+                                    <div className="space-y-2 animate-in slide-in-from-top-2">
+                                        <Input
+                                            value={formData.subcategory}
+                                            onChange={handleChange}
+                                            name="subcategory"
+                                            placeholder="New Subcategory Name"
+                                        />
+                                        <Button size="sm" variant="ghost" className="w-full text-xs" onClick={() => setIsNewSubcategory(false)}>
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Product Media</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-2 gap-3">
+                                {imageSlots.map((slot, index) => (
+                                    <div key={index} className="relative aspect-square border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden hover:border-gray-400 dark:hover:border-gray-600 transition-colors bg-gray-50 dark:bg-gray-900 group">
+                                        {slot ? (
+                                            <>
+                                                <img
+                                                    src={slot instanceof File ? URL.createObjectURL(slot) : slot}
+                                                    alt={`Product ${index + 1}`}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveImage(index)}
+                                                    className="absolute top-1 right-1 bg-white/90 text-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-white"
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer text-gray-400 hover:text-gray-600">
+                                                <Upload className="w-6 h-6 mb-2 opacity-50" />
+                                                <span className="text-[10px] font-medium uppercase tracking-wider">Add</span>
+                                                <input
+                                                    type="file"
+                                                    className="hidden"
+                                                    accept="image/*"
+                                                    onChange={(e) => handleFileSelect(index, e)}
+                                                />
+                                            </label>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-4 text-center">
+                                Upload up to 4 images. <br /> Supported formats: .jpg, .png
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         </form>
     );

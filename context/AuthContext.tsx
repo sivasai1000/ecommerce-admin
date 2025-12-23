@@ -28,8 +28,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         // Load from localStorage on mount
-        const storedToken = localStorage.getItem("token");
-        const storedUser = localStorage.getItem("user");
+        const storedToken = localStorage.getItem("adminToken");
+        const storedUser = localStorage.getItem("adminUser");
 
         if (storedToken && storedUser) {
             try {
@@ -37,8 +37,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setUser(JSON.parse(storedUser));
             } catch (e) {
                 console.error("Failed to parse user data");
-                localStorage.removeItem("token");
-                localStorage.removeItem("user");
+                localStorage.removeItem("adminToken");
+                localStorage.removeItem("adminUser");
             }
         }
         setIsLoading(false);
@@ -47,8 +47,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const logout = () => {
         setToken(null);
         setUser(null);
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+        localStorage.removeItem("adminToken");
+        localStorage.removeItem("adminUser");
         router.push("/login");
     };
 
@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             ...options.headers,
         };
 
-        const currentToken = localStorage.getItem("token");
+        const currentToken = localStorage.getItem("adminToken");
         if (currentToken) {
             headers["Authorization"] = `Bearer ${currentToken}`;
         }

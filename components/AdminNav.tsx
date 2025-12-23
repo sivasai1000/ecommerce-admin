@@ -1,73 +1,111 @@
 "use client";
 
 import Link from "next/link";
-import { LayoutDashboard, Package, ShoppingCart, Users, Tags, FileText, Megaphone, HelpCircle, BookOpen, MessageSquare } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { usePathname } from "next/navigation";
+import {
+    LayoutDashboard,
+    Package,
+    ShoppingCart,
+    Users,
+    Tags,
+    FileText,
+    Megaphone,
+    HelpCircle,
+    BookOpen,
+    MessageSquare,
+    MessageCircle,
+    Settings,
+    LogOut,
+    Truck,
+    Layers
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AdminNavProps {
     onLinkClick?: () => void;
 }
 
+interface NavItem {
+    name: string;
+    href: string;
+    icon: React.ElementType;
+}
+
+interface NavGroup {
+    title: string;
+    items: NavItem[];
+}
+
+const navGroups: NavGroup[] = [
+    {
+        title: "Overview",
+        items: [
+            { name: "Dashboard", href: "/", icon: LayoutDashboard },
+        ]
+    },
+    {
+        title: "Management",
+        items: [
+            { name: "Products", href: "/products", icon: Package },
+            { name: "Orders", href: "/orders", icon: ShoppingCart },
+            { name: "Categories", href: "/categories", icon: Layers }, // Added Icon
+            { name: "Users", href: "/users", icon: Users },
+            { name: "Coupons", href: "/coupons", icon: Tags },
+        ]
+    },
+    {
+        title: "Content",
+        items: [
+            { name: "Blogs", href: "/blogs", icon: FileText },
+            { name: "Reviews", href: "/reviews", icon: MessageSquare },
+            { name: "Marketing", href: "/marketing", icon: Megaphone },
+            { name: "FAQs", href: "/faqs", icon: HelpCircle },
+        ]
+    },
+    {
+        title: "Settings",
+        items: [
+            { name: "Shipping", href: "/shipping", icon: Truck },
+            { name: "Privacy Policy", href: "/privacy", icon: BookOpen },
+            { name: "Terms of Service", href: "/terms", icon: FileText },
+        ]
+    }
+];
+
 export default function AdminNav({ onLinkClick }: AdminNavProps) {
     const pathname = usePathname();
 
-    const links = [
-        { href: "/", label: "Dashboard", icon: LayoutDashboard },
-        { href: "/products", label: "Products", icon: Package },
-        { href: "/orders", label: "Orders", icon: ShoppingCart },
-        { href: "/users", label: "Users", icon: Users },
-        { href: "/coupons", label: "Coupons", icon: Tags },
-        { href: "/blogs", label: "Blogs", icon: FileText },
-        { href: "/reviews", label: "Reviews", icon: MessageSquare },
-        { href: "/marketing", label: "Marketing", icon: Megaphone },
-        { href: "/faqs", label: "FAQs", icon: HelpCircle },
-        { href: "/contact", label: "Contact", icon: Megaphone },
-        { href: "/privacy", label: "Privacy", icon: BookOpen },
-        { href: "/shipping", label: "Shipping", icon: Package },
-        { href: "/terms", label: "Terms", icon: FileText },
-    ];
-
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
-    };
-
     return (
-        <nav className="space-y-2 flex flex-col h-[calc(100vh-8rem)]">
-            <div className="flex-1 space-y-2">
-                {links.map((link) => {
-                    const Icon = link.icon;
-                    const isActive = pathname === link.href;
-                    return (
-                        <Link key={link.href} href={link.href} onClick={onLinkClick}>
-                            <Button
-                                variant={isActive ? "secondary" : "ghost"}
-                                className={cn(
-                                    "w-full justify-start",
-                                    isActive ? "bg-gray-800 text-white" : "text-gray-300 hover:text-white hover:bg-gray-800"
-                                )}
-                            >
-                                <Icon className="mr-2 h-4 w-4" />
-                                {link.label}
-                            </Button>
-                        </Link>
-                    );
-                })}
-            </div>
-            <div className="pt-4 border-t border-gray-700 mt-auto">
-                <Button
-                    variant="ghost"
-                    className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-900/20"
-                    onClick={handleLogout}
-                >
-                    {/* Add LogOut import if missing, or reuse generic Icon */}
-                    <span className="mr-2">🚪</span>
-                    Logout
-                </Button>
-            </div>
+        <nav className="flex-1 space-y-6 px-3 py-4">
+            {navGroups.map((group, groupIdx) => (
+                <div key={groupIdx} className="space-y-2">
+                    <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        {group.title}
+                    </h3>
+                    <div className="space-y-1">
+                        {group.items.map((item) => {
+                            const isActive = pathname === item.href;
+                            const Icon = item.icon;
+                            return (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    onClick={onLinkClick}
+                                    className={cn(
+                                        "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 group",
+                                        isActive
+                                            ? "bg-blue-600 text-white shadow-md shadow-blue-900/20"
+                                            : "text-gray-400 hover:text-white hover:bg-gray-800/50"
+                                    )}
+                                >
+                                    <Icon className={cn("h-4 w-4 transition-colors", isActive ? "text-white" : "text-gray-500 group-hover:text-gray-300")} />
+                                    {item.name}
+                                </Link>
+                            );
+                        })}
+                    </div>
+                </div>
+            ))}
         </nav>
     );
 }

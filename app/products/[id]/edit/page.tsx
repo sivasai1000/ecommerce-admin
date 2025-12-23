@@ -37,7 +37,7 @@ export default function EditProductPage() {
         <div className="space-y-6">
             <h1 className="text-3xl font-bold tracking-tight">Edit Product</h1>
             <div className="rounded-xl border bg-card text-card-foreground shadow p-6">
-                <ProductForm initialData={product} isEditing productId={Number(id)} />
+                <ProductForm initialData={product} isEditing productId={id as string} />
             </div>
         </div>
     );

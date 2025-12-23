@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Plus, X, Upload } from "lucide-react";
 import {
     Select,
     SelectContent,
@@ -23,6 +24,7 @@ interface ProductFormData {
     category: string;
     subcategory: string;
     imageUrl: string;
+    images?: string[]; // Add images array to state
     stock: string;
     mrp: string;
     discount?: string;
@@ -50,13 +52,37 @@ export default function ProductForm({ initialData, isEditing, productId }: Produ
             category: "",
             subcategory: "",
             imageUrl: "",
+            images: [],
             stock: "0",
             mrp: "",
             discount: "0",
         }
     );
 
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    useEffect(() => {
+        if (initialData?.imageUrl) {
+            try {
+                let initialSlots: (string | null)[] = [null, null, null, null];
+                if (initialData.imageUrl.startsWith('[') || initialData.imageUrl.startsWith('{')) {
+                    const parsed = JSON.parse(initialData.imageUrl);
+                    if (Array.isArray(parsed)) {
+                        parsed.forEach((url, idx) => {
+                            if (idx < 4) initialSlots[idx] = url;
+                        });
+                    } else if (parsed) {
+                        initialSlots[0] = parsed as string;
+                    }
+                } else {
+                    initialSlots[0] = initialData.imageUrl;
+                }
+                setImageSlots(initialSlots);
+            } catch (e) {
+                setImageSlots([initialData.imageUrl, null, null, null]);
+            }
+        }
+    }, [initialData]);
+
+    const [imageSlots, setImageSlots] = useState<(string | File | null)[]>([null, null, null, null]);
     const [categories, setCategories] = useState<CategoryData[]>([]);
     const [isNewCategory, setIsNewCategory] = useState(false);
     const [isNewSubcategory, setIsNewSubcategory] = useState(false);
@@ -116,6 +142,21 @@ export default function ProductForm({ initialData, isEditing, productId }: Produ
         });
     };
 
+    const handleFileSelect = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const newSlots = [...imageSlots];
+            newSlots[index] = file;
+            setImageSlots(newSlots);
+        }
+    };
+
+    const handleRemoveImage = (index: number) => {
+        const newSlots = [...imageSlots];
+        newSlots[index] = null;
+        setImageSlots(newSlots);
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -137,9 +178,19 @@ export default function ProductForm({ initialData, isEditing, productId }: Produ
             submitFormData.append('subcategory', formData.subcategory);
             submitFormData.append('discount', formData.discount || "0");
 
-            if (selectedFile) {
-                submitFormData.append('image', selectedFile);
-            }
+            // Handle Image Slots
+            const imageOrder: (string | null)[] = [];
+            imageSlots.forEach(slot => {
+                if (slot instanceof File) {
+                    submitFormData.append('images', slot);
+                    imageOrder.push('new');
+                } else if (typeof slot === 'string') {
+                    imageOrder.push(slot);
+                } else {
+                    imageOrder.push(null);
+                }
+            });
+            submitFormData.append('imageOrder', JSON.stringify(imageOrder));
 
             const token = localStorage.getItem("token") || localStorage.getItem("adminToken");
             const response = await fetch(url, {
@@ -350,33 +401,39 @@ export default function ProductForm({ initialData, isEditing, productId }: Produ
             </div>
 
             <div className="space-y-4">
-                <Label>Product Image</Label>
-
-                <div className="flex flex-col gap-4">
-                    <Label className="text-sm font-medium">Upload Image</Label>
-                    <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            setSelectedFile(file);
-                            const previewUrl = URL.createObjectURL(file);
-                            setFormData((prev) => ({ ...prev, imageUrl: previewUrl }));
-                        }}
-                        className="cursor-pointer"
-                        required={!isEditing}
-                    />
-
-                    {formData.imageUrl && (
-                        <div className="relative w-full h-64 border rounded-lg overflow-hidden bg-gray-50">
-                            <img
-                                src={formData.imageUrl}
-                                alt="Preview"
-                                className="w-full h-full object-contain"
-                            />
+                <Label>Product Images (Max 4)</Label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {imageSlots.map((slot, index) => (
+                        <div key={index} className="relative aspect-square border-2 border-dashed border-gray-300 rounded-lg overflow-hidden hover:border-gray-400 transition-colors bg-gray-50 dark:bg-gray-800">
+                            {slot ? (
+                                <>
+                                    <img
+                                        src={slot instanceof File ? URL.createObjectURL(slot) : slot}
+                                        alt={`Product ${index + 1}`}
+                                        className="w-full h-full object-cover"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveImage(index)}
+                                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-sm"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </>
+                            ) : (
+                                <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer text-gray-400 hover:text-gray-600">
+                                    <Plus className="w-8 h-8 mb-2 opacity-50" />
+                                    <span className="text-xs font-medium uppercase tracking-wider">Upload</span>
+                                    <input
+                                        type="file"
+                                        className="hidden"
+                                        accept="image/*"
+                                        onChange={(e) => handleFileSelect(index, e)}
+                                    />
+                                </label>
+                            )}
                         </div>
-                    )}
+                    ))}
                 </div>
             </div>
 

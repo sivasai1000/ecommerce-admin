@@ -17,7 +17,8 @@ import {
     Settings,
     LogOut,
     Truck,
-    Layers
+    Layers,
+    Phone
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -59,6 +60,7 @@ const navGroups: NavGroup[] = [
             { name: "Blogs", href: "/blogs", icon: FileText },
             { name: "Reviews", href: "/reviews", icon: MessageSquare },
             { name: "Marketing", href: "/marketing", icon: Megaphone },
+            { name: "Contact", href: "/contact", icon: Phone },
             { name: "FAQs", href: "/faqs", icon: HelpCircle },
         ]
     },

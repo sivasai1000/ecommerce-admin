@@ -84,7 +84,7 @@ export default function AdminNav({ onLinkClick }: AdminNavProps) {
                     </h3>
                     <div className="space-y-1">
                         {group.items.map((item) => {
-                            const isActive = pathname === item.href;
+                            const isActive = pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href));
                             const Icon = item.icon;
                             return (
                                 <Link

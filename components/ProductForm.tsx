@@ -356,13 +356,20 @@ export default function ProductForm({ initialData, isEditing, productId }: Produ
                                                 setIsNewSubcategory(false);
                                             }
                                         }}
-                                        value={formData.category && categories.some(c => c.name === formData.category) ? formData.category : undefined}
+                                        value={formData.category || undefined}
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select Category" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectGroup>
+                                                {/* Ensure current category is shown even if not in the list */}
+                                                {formData.category && !categories.some(c => c.name === formData.category) && !isNewCategory && (
+                                                    <SelectItem value={formData.category}>
+                                                        {formData.category}
+                                                    </SelectItem>
+                                                )}
+
                                                 {categories.map((cat, index) => (
                                                     <SelectItem key={`${cat.name}-${index}`} value={cat.name}>
                                                         {cat.name}
@@ -400,13 +407,20 @@ export default function ProductForm({ initialData, isEditing, productId }: Produ
                                                 setFormData((prev) => ({ ...prev, subcategory: value }));
                                             }
                                         }}
-                                        value={formData.subcategory && availableSubcategories.includes(formData.subcategory) ? formData.subcategory : undefined}
+                                        value={formData.subcategory || undefined}
                                         disabled={!formData.category}
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select Subcategory" />
                                         </SelectTrigger>
                                         <SelectContent>
+                                            {/* Ensure current subcategory is shown even if not in the list */}
+                                            {formData.subcategory && !availableSubcategories.includes(formData.subcategory) && !isNewSubcategory && (
+                                                <SelectItem value={formData.subcategory}>
+                                                    {formData.subcategory}
+                                                </SelectItem>
+                                            )}
+
                                             {availableSubcategories.map((sub, index) => (
                                                 <SelectItem key={`${sub}-${index}`} value={sub}>
                                                     {sub}

@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
+import { Menu, LogOut } from "lucide-react";
 import AdminNav from "./AdminNav";
+import { useAuth } from "@/context/AuthContext";
 
 export default function MobileNav() {
     const [open, setOpen] = useState(false);
+    const { logout, user } = useAuth();
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
@@ -34,6 +36,28 @@ export default function MobileNav() {
                     {/* Nav */}
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
                         <AdminNav onLinkClick={() => setOpen(false)} />
+                    </div>
+
+                    {/* Footer */}
+                    <div className="p-4 border-t border-slate-800/50 bg-slate-900/50">
+                        <div className="flex items-center gap-3 mb-4 px-2">
+                            <div className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
+                                <span className="text-xs font-medium text-slate-300">
+                                    {user?.name?.charAt(0).toUpperCase() || 'A'}
+                                </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-white truncate">{user?.name || 'Administrator'}</p>
+                            </div>
+                        </div>
+                        <Button
+                            variant="destructive"
+                            className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-950/30 border border-red-900/20"
+                            onClick={logout}
+                        >
+                            <LogOut className="mr-2 h-4 w-4" />
+                            Log out
+                        </Button>
                     </div>
                 </div>
             </SheetContent>

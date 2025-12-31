@@ -7,30 +7,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 export default function TermsPage() {
-    const { token } = useAuth();
-
+    const { apiCall } = useAuth();
     const [formData, setFormData] = useState({ title: "", content: "" });
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
-        if (token) fetchPage();
-    }, [token]);
+        fetchPage();
+    }, []);
 
     const fetchPage = async () => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/terms`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.ok) {
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/terms`);
+            if (res && res.ok) {
                 const data = await res.json();
-                setFormData({ title: data.title, content: data.content });
+                setFormData({ title: data.title || "", content: data.content || "" });
             } else {
-                toast.error("Terms page data not found");
+                console.log("Terms page data not found or init");
             }
         } catch (error) {
             toast.error("Failed to load Terms page");
@@ -43,17 +40,13 @@ export default function TermsPage() {
         e.preventDefault();
         setIsSaving(true);
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/terms`, {
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/terms`, {
                 method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`
-                },
                 body: JSON.stringify(formData)
             });
 
-            if (res.ok) {
-                toast.success("Terms and Conditions updated successfully");
+            if (res && res.ok) {
+                toast.success("Terms & Conditions updated successfully");
             } else {
                 toast.error("Failed to update Terms page");
             }
@@ -64,18 +57,21 @@ export default function TermsPage() {
         }
     };
 
-    if (loading) return <div className="flex h-96 items-center justify-center"><Loader2 className="animate-spin" /></div>;
+    if (loading) return <div className="flex bg-slate-50 dark:bg-slate-900 justify-center p-8 h-[50vh] items-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
 
     return (
         <div className="space-y-6 max-w-4xl mx-auto">
             <div className="flex items-center space-x-4">
-                <h1 className="text-3xl font-bold tracking-tight">Terms and Conditions</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Terms & Conditions</h1>
             </div>
 
-            <Card>
+            <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
                 <CardHeader>
-                    <CardTitle>Edit Terms and Conditions</CardTitle>
-                    <CardDescription>Update the title and content for the Terms and Conditions.</CardDescription>
+                    <CardTitle className="flex items-center gap-2">
+                        <FileText className="h-5 w-5 text-slate-500" />
+                        Edit Agreement Content
+                    </CardTitle>
+                    <CardDescription>Update the legal terms and conditions for using the platform.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSave} className="space-y-6">
@@ -85,6 +81,8 @@ export default function TermsPage() {
                                 value={formData.title}
                                 onChange={e => setFormData({ ...formData, title: e.target.value })}
                                 required
+                                placeholder="e.g. Terms of Service"
+                                className="font-medium"
                             />
                         </div>
                         <div className="space-y-2">
@@ -94,13 +92,14 @@ export default function TermsPage() {
                                 onChange={e => setFormData({ ...formData, content: e.target.value })}
                                 className="min-h-[400px] font-mono text-sm leading-relaxed"
                                 required
+                                placeholder="## 1. Introduction..."
                             />
                             <p className="text-xs text-muted-foreground">
-                                Basic text formatting is supported. New lines created with Enter key.
+                                Markdown formatting supported. Use ## for headers, **bold**, etc.
                             </p>
                         </div>
-                        <div className="flex justify-end">
-                            <Button type="submit" disabled={isSaving}>
+                        <div className="flex justify-end pt-4">
+                            <Button type="submit" disabled={isSaving} className="w-full sm:w-auto min-w-[150px]">
                                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                                 Save Changes
                             </Button>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Check, X, Trash2, Star } from "lucide-react";
+import { Loader2, Check, X, Trash2, Star, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
@@ -25,21 +25,20 @@ interface Review {
 }
 
 export default function ReviewsPage() {
-    const { token } = useAuth();
+    const { apiCall } = useAuth(); // Removed token destructuring, use apiCall instead
     const [reviews, setReviews] = useState<Review[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState("all");
 
     useEffect(() => {
-        if (token) fetchReviews();
-    }, [token]);
+        fetchReviews();
+    }, []);
 
     const fetchReviews = async () => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews/admin`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.ok) {
+            // Using apiCall already handles Authorization header
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews/admin`);
+            if (res && res.ok) {
                 setReviews(await res.json());
             }
         } catch (error) {
@@ -51,16 +50,15 @@ export default function ReviewsPage() {
 
     const updateStatus = async (id: number, status: 'approved' | 'rejected') => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews/admin/${id}`, {
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews/admin/${id}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`
                 },
                 body: JSON.stringify({ status })
             });
 
-            if (res.ok) {
+            if (res && res.ok) {
                 toast.success(`Review ${status}`);
                 fetchReviews();
             } else {
@@ -74,12 +72,11 @@ export default function ReviewsPage() {
     const deleteReview = async (id: number) => {
         if (!confirm("Are you sure you want to delete this review?")) return;
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews/admin/${id}`, {
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews/admin/${id}`, {
                 method: "DELETE",
-                headers: { Authorization: `Bearer ${token}` }
             });
 
-            if (res.ok) {
+            if (res && res.ok) {
                 toast.success("Review deleted");
                 fetchReviews();
             } else {
@@ -92,20 +89,18 @@ export default function ReviewsPage() {
 
     const filteredReviews = filter === "all" ? reviews : reviews.filter(r => r.status === filter);
 
-    if (loading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>;
+    if (loading) return <div className="flex bg-slate-50 dark:bg-slate-900 justify-center p-8 h-[50vh] items-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold tracking-tight">Product Reviews</h1>
-                <div className="flex gap-4">
-                    <Link href="/reviews/trash">
-                        <Button variant="outline" className="text-red-500 hover:text-red-600 border-red-200">
-                            View Trash
-                        </Button>
-                    </Link>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Reviews</h1>
+                    <p className="text-slate-500 dark:text-slate-400">Moderate customer feedback and ratings</p>
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                     <Select value={filter} onValueChange={setFilter}>
-                        <SelectTrigger className="w-[180px]">
+                        <SelectTrigger className="w-full sm:w-[180px]">
                             <SelectValue placeholder="Filter Status" />
                         </SelectTrigger>
                         <SelectContent>
@@ -115,91 +110,107 @@ export default function ReviewsPage() {
                             <SelectItem value="rejected">Rejected</SelectItem>
                         </SelectContent>
                     </Select>
+                    <Link href="/reviews/trash">
+                        <Button variant="outline" className="text-red-500 hover:text-red-600 border-red-200">
+                            Trash
+                        </Button>
+                    </Link>
                 </div>
             </div>
 
-            <Card>
+            <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
                 <CardHeader>
                     <CardTitle>Moderate Reviews</CardTitle>
                     <CardDescription>Approve or reject customer reviews.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Product</TableHead>
-                                <TableHead>User</TableHead>
-                                <TableHead>Rating</TableHead>
-                                <TableHead className="w-[40%]">Comment</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredReviews.length === 0 ? (
+                    <div className="rounded-md border overflow-x-auto">
+                        <Table>
+                            <TableHeader>
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                                        No reviews found
-                                    </TableCell>
+                                    <TableHead className="min-w-[200px]">Product</TableHead>
+                                    <TableHead>User</TableHead>
+                                    <TableHead>Rating</TableHead>
+                                    <TableHead className="min-w-[300px]">Comment</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
-                            ) : (
-                                filteredReviews.map((review) => (
-                                    <TableRow key={review.id}>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                {review.productImage && (
-                                                    <img src={review.productImage} className="w-8 h-8 rounded object-cover" />
-                                                )}
-                                                <span className="font-medium text-sm max-w-[150px] truncate" title={review.productName}>
-                                                    {review.productName}
-                                                </span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>{review.userName}</TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center">
-                                                <Star className="w-4 h-4 text-yellow-500 fill-current mr-1" />
-                                                {review.rating}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-sm text-muted-foreground">
-                                            {review.comment}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant={
-                                                review.status === 'approved' ? 'default' :
-                                                    review.status === 'rejected' ? 'destructive' : 'secondary'
-                                            }>
-                                                {review.status}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end gap-2">
-                                                {review.status === 'pending' && (
-                                                    <>
-                                                        <Button size="icon" variant="ghost" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => updateStatus(review.id, 'approved')}>
-                                                            <Check className="w-4 h-4" />
-                                                        </Button>
-                                                        <Button size="icon" variant="ghost" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => updateStatus(review.id, 'rejected')}>
-                                                            <X className="w-4 h-4" />
-                                                        </Button>
-                                                    </>
-                                                )}
-                                                {review.status === 'rejected' && (
-                                                    <Button size="icon" variant="ghost" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => updateStatus(review.id, 'approved')}>
-                                                        <Check className="w-4 h-4" />
-                                                    </Button>
-                                                )}
-                                                <Button size="icon" variant="ghost" className="text-gray-500 hover:text-red-600" onClick={() => deleteReview(review.id)}>
-                                                    <Trash2 className="w-4 h-4" />
-                                                </Button>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredReviews.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                                            <div className="flex flex-col items-center justify-center">
+                                                <MessageSquare className="h-8 w-8 text-slate-300 mb-2" />
+                                                <p>No reviews found</p>
                                             </div>
                                         </TableCell>
                                     </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
+                                ) : (
+                                    filteredReviews.map((review) => (
+                                        <TableRow key={review.id}>
+                                            <TableCell>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0">
+                                                        {review.productImage ? (
+                                                            <img src={review.productImage} className="w-full h-full object-cover" alt="" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">Img</div>
+                                                        )}
+                                                    </div>
+                                                    <span className="font-medium text-sm line-clamp-2" title={review.productName}>
+                                                        {review.productName}
+                                                    </span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="whitespace-nowrap">{review.userName}</TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center bg-yellow-50 dark:bg-yellow-950/30 text-yellow-700 dark:text-yellow-500 px-2 py-1 rounded w-fit">
+                                                    <Star className="w-3 h-3 fill-current mr-1" />
+                                                    <span className="font-semibold text-xs">{review.rating}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-sm text-slate-600 dark:text-slate-400">
+                                                <div className="line-clamp-2" title={review.comment}>
+                                                    {review.comment}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant={
+                                                    review.status === 'approved' ? 'default' :
+                                                        review.status === 'rejected' ? 'destructive' : 'secondary'
+                                                } className="capitalize">
+                                                    {review.status}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex justify-end gap-1">
+                                                    {review.status === 'pending' && (
+                                                        <>
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => updateStatus(review.id, 'approved')}>
+                                                                <Check className="w-4 h-4" />
+                                                            </Button>
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => updateStatus(review.id, 'rejected')}>
+                                                                <X className="w-4 h-4" />
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                    {review.status === 'rejected' && (
+                                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => updateStatus(review.id, 'approved')}>
+                                                            <Check className="w-4 h-4" />
+                                                        </Button>
+                                                    )}
+                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-red-600" onClick={() => deleteReview(review.id)}>
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
             </Card>
         </div>

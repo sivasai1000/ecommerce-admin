@@ -5,23 +5,36 @@ import { TrashTable } from "@/components/trash-table";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
 
 export default function BannersTrashPage() {
+    const { apiCall } = useAuth();
     const [banners, setBanners] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    const getImageUrl = (url: string) => {
+        if (!url) return null;
+        try {
+            if (url.trim().startsWith('[') || url.trim().startsWith('{')) {
+                const parsed = JSON.parse(url);
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed[0];
+                return null;
+            }
+        } catch (e) { }
+        return url;
+    };
+
     const fetchTrash = async () => {
         try {
-            const token = localStorage.getItem("adminToken");
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/banners/trash`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (response.ok) {
-                const data = await response.json();
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/banners/trash`);
+            if (res && res.ok) {
+                const data = await res.json();
                 setBanners(data);
             }
         } catch (error) {
             console.error('Error fetching trash banners:', error);
+            toast.error("Failed to load trash");
         } finally {
             setLoading(false);
         }
@@ -35,19 +48,19 @@ export default function BannersTrashPage() {
         if (!confirm("Are you sure you want to restore this banner?")) return;
 
         try {
-            const token = localStorage.getItem("adminToken");
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/banners/restore/${id}`, {
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/banners/restore/${id}`, {
                 method: "PUT",
-                headers: { Authorization: `Bearer ${token}` }
             });
 
-            if (response.ok) {
+            if (res && res.ok) {
+                toast.success("Banner restored successfully");
                 fetchTrash();
             } else {
-                alert("Failed to restore banner");
+                toast.error("Failed to restore banner");
             }
         } catch (error) {
             console.error("Error restoring banner:", error);
+            toast.error("Error restoring banner");
         }
     };
 
@@ -56,9 +69,12 @@ export default function BannersTrashPage() {
         {
             header: "Image",
             accessorKey: "imageUrl",
-            cell: (item: any) => item.imageUrl ? (
-                <img src={item.imageUrl} alt={item.title} className="h-10 w-20 object-cover rounded" />
-            ) : "No Image"
+            cell: (item: any) => {
+                const img = getImageUrl(item.imageUrl);
+                return img ? (
+                    <img src={img} alt={item.title} className="h-10 w-20 object-cover rounded" />
+                ) : "No Image";
+            }
         },
         { header: "Title", accessorKey: "title" },
         { header: "Subtitle", accessorKey: "subtitle" },

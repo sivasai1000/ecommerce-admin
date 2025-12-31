@@ -27,7 +27,7 @@ interface TrashTableProps {
 
 export function TrashTable({ data, columns, onRestore, onDelete, resourceName }: TrashTableProps) {
     return (
-        <div className="rounded-md border">
+        <div className="rounded-md border overflow-x-auto">
             <Table>
                 <TableHeader>
                     <TableRow>

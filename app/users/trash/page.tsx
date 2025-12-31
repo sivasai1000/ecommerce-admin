@@ -5,25 +5,24 @@ import { TrashTable } from "@/components/trash-table";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
 
 export default function UsersTrashPage() {
+    const { apiCall } = useAuth();
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
-    const router = useRouter();
 
     const fetchTrash = async () => {
         try {
-            const token = localStorage.getItem("adminToken");
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/trash`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (response.ok) {
-                const data = await response.json();
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/users/trash`);
+            if (res && res.ok) {
+                const data = await res.json();
                 setUsers(data);
             }
         } catch (error) {
             console.error('Error fetching trash users:', error);
+            toast.error("Failed to load trash");
         } finally {
             setLoading(false);
         }
@@ -37,21 +36,19 @@ export default function UsersTrashPage() {
         if (!confirm("Are you sure you want to restore this user?")) return;
 
         try {
-            const token = localStorage.getItem("adminToken");
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/restore/${id}`, {
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/users/restore/${id}`, {
                 method: "PUT",
-                headers: { Authorization: `Bearer ${token}` }
             });
 
-            if (response.ok) {
-                // Refresh list
+            if (res && res.ok) {
+                toast.success("User restored successfully");
                 fetchTrash();
-                // Optional: Show toast
             } else {
-                alert("Failed to restore user");
+                toast.error("Failed to restore user");
             }
         } catch (error) {
             console.error("Error restoring user:", error);
+            toast.error("Error restoring user");
         }
     };
 

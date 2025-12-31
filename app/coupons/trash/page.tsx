@@ -5,23 +5,24 @@ import { TrashTable } from "@/components/trash-table";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
 
 export default function CouponsTrashPage() {
+    const { apiCall } = useAuth();
     const [coupons, setCoupons] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const fetchTrash = async () => {
         try {
-            const token = localStorage.getItem("adminToken");
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/coupons/trash`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (response.ok) {
-                const data = await response.json();
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/coupons/trash`);
+            if (res && res.ok) {
+                const data = await res.json();
                 setCoupons(data);
             }
         } catch (error) {
             console.error('Error fetching trash coupons:', error);
+            toast.error("Failed to load trash");
         } finally {
             setLoading(false);
         }
@@ -35,19 +36,19 @@ export default function CouponsTrashPage() {
         if (!confirm("Are you sure you want to restore this coupon?")) return;
 
         try {
-            const token = localStorage.getItem("adminToken");
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/coupons/restore/${id}`, {
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/coupons/restore/${id}`, {
                 method: "PUT",
-                headers: { Authorization: `Bearer ${token}` }
             });
 
-            if (response.ok) {
+            if (res && res.ok) {
+                toast.success("Coupon restored successfully");
                 fetchTrash();
             } else {
-                alert("Failed to restore coupon");
+                toast.error("Failed to restore coupon");
             }
         } catch (error) {
             console.error("Error restoring coupon:", error);
+            toast.error("Error restoring coupon");
         }
     };
 
@@ -58,7 +59,7 @@ export default function CouponsTrashPage() {
         {
             header: "Expiry Date",
             accessorKey: "expiryDate",
-            cell: (item: any) => new Date(item.expiryDate).toLocaleDateString()
+            cell: (item: any) => item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : 'N/A'
         },
         {
             header: "Deleted At",

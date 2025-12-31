@@ -5,23 +5,24 @@ import { TrashTable } from "@/components/trash-table";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
 
 export default function ReviewsTrashPage() {
+    const { apiCall } = useAuth();
     const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const fetchTrash = async () => {
         try {
-            const token = localStorage.getItem("adminToken");
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews/admin/trash`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (response.ok) {
-                const data = await response.json();
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews/admin/trash`);
+            if (res && res.ok) {
+                const data = await res.json();
                 setReviews(data);
             }
         } catch (error) {
             console.error('Error fetching trash reviews:', error);
+            toast.error("Failed to load trash");
         } finally {
             setLoading(false);
         }
@@ -35,19 +36,19 @@ export default function ReviewsTrashPage() {
         if (!confirm("Are you sure you want to restore this review?")) return;
 
         try {
-            const token = localStorage.getItem("adminToken");
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews/admin/restore/${id}`, {
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews/admin/restore/${id}`, {
                 method: "PUT",
-                headers: { Authorization: `Bearer ${token}` }
             });
 
-            if (response.ok) {
+            if (res && res.ok) {
+                toast.success("Review restored successfully");
                 fetchTrash();
             } else {
-                alert("Failed to restore review");
+                toast.error("Failed to restore review");
             }
         } catch (error) {
             console.error("Error restoring review:", error);
+            toast.error("Error restoring review");
         }
     };
 

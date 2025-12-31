@@ -5,24 +5,36 @@ import { TrashTable } from "@/components/trash-table";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
 
 export default function BlogsTrashPage() {
+    const { apiCall } = useAuth();
     const [blogs, setBlogs] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    const getImageUrl = (url: string) => {
+        if (!url) return null;
+        try {
+            if (url.trim().startsWith('[') || url.trim().startsWith('{')) {
+                const parsed = JSON.parse(url);
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed[0];
+                return null;
+            }
+        } catch (e) { }
+        return url;
+    };
+
     const fetchTrash = async () => {
         try {
-            const token = localStorage.getItem("adminToken");
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/blogs/trash`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (response.ok) {
-                const data = await response.json();
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/blogs/trash`);
+            if (res && res.ok) {
+                const data = await res.json();
                 setBlogs(data);
             }
         } catch (error) {
             console.error('Error fetching trash blogs:', error);
+            toast.error("Failed to load trash");
         } finally {
             setLoading(false);
         }
@@ -36,19 +48,19 @@ export default function BlogsTrashPage() {
         if (!confirm("Are you sure you want to restore this blog?")) return;
 
         try {
-            const token = localStorage.getItem("adminToken");
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/blogs/restore/${id}`, {
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/blogs/restore/${id}`, {
                 method: "PUT",
-                headers: { Authorization: `Bearer ${token}` }
             });
 
-            if (response.ok) {
+            if (res && res.ok) {
+                toast.success("Blog restored successfully");
                 fetchTrash();
             } else {
-                alert("Failed to restore blog");
+                toast.error("Failed to restore blog");
             }
         } catch (error) {
             console.error("Error restoring blog:", error);
+            toast.error("Error restoring blog");
         }
     };
 
@@ -57,9 +69,12 @@ export default function BlogsTrashPage() {
         {
             header: "Image",
             accessorKey: "imageUrl",
-            cell: (item: any) => item.imageUrl ? (
-                <img src={item.imageUrl} alt={item.title} className="h-10 w-10 object-cover rounded" />
-            ) : "No Image"
+            cell: (item: any) => {
+                const img = getImageUrl(item.imageUrl);
+                return img ? (
+                    <img src={img} alt={item.title} className="h-10 w-10 object-cover rounded" />
+                ) : "No Image";
+            }
         },
         { header: "Title", accessorKey: "title" },
         { header: "Category", accessorKey: "category" },

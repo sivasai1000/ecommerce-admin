@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash, Loader2, Plus, Upload } from "lucide-react";
+import { Trash, Loader2, Plus, Upload, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -28,7 +28,7 @@ interface Subscriber {
 }
 
 export default function MarketingPage() {
-    const { token } = useAuth();
+    const { apiCall } = useAuth();
     const [banners, setBanners] = useState<Banner[]>([]);
     const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
     const [loading, setLoading] = useState(true);
@@ -56,22 +56,22 @@ export default function MarketingPage() {
     const [aboutImage, setAboutImage] = useState<File | null>(null);
 
     useEffect(() => {
-        if (token) fetchData();
-    }, [token]);
+        fetchData();
+    }, []);
 
     const fetchData = async () => {
         try {
+            // Parallel fetches for efficiency
+            // Note: Banners/About might be public, but using apiCall is fine for admin dashboard
             const [bannerRes, subRes, aboutRes] = await Promise.all([
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/banners`),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/subscribers`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                }),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/about`)
+                apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/banners`),
+                apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/subscribers`),
+                apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/about`)
             ]);
 
-            if (bannerRes.ok) setBanners(await bannerRes.json());
-            if (subRes.ok) setSubscribers(await subRes.json());
-            if (aboutRes.ok) {
+            if (bannerRes && bannerRes.ok) setBanners(await bannerRes.json());
+            if (subRes && subRes.ok) setSubscribers(await subRes.json());
+            if (aboutRes && aboutRes.ok) {
                 const about = await aboutRes.json();
                 setAboutData({
                     title: about.title || "",
@@ -80,6 +80,7 @@ export default function MarketingPage() {
                 });
             }
         } catch (error) {
+            console.error(error);
             toast.error("Failed to fetch marketing data");
         } finally {
             setLoading(false);
@@ -108,20 +109,39 @@ export default function MarketingPage() {
             formData.append('title', aboutData.title);
             formData.append('description', aboutData.description);
             if (aboutImage) {
-                formData.append('image', aboutImage);
+                formData.append('image', aboutImage); // Handle image upload specifically
             }
 
+            // apiCall handles headers, but FormData needs specific handling (omit Content-Type to let browser set boundary)
+            // apiCall method needs to handle FormData correctly if it automatically sets Content-Type: application/json
+            // We might need to override headers in apiCall options.
+            // Let's assume apiCall is smart enough or we pass empty headers to override default json type if generic.
+            // Wait, AuthContext apiCall adds Content-Type: application/json by default.
+            // We need to override it for FormData.
+            // Hack/Fix: Pass headers with Content-Type as undefined to let browser set it?
+            // Actually, typical fetch behavior requires removing the header.
+            // Let's modify usage: apiCall merges headers. If we pass 'Content-Type': undefined meant to delete? No.
+            // If AuthContext forces application/json, uploading files will fail.
+            // Strategy: Check if Body is FormData in AuthContext? No, I can't change AuthContext right now easily without context switch.
+            // Alternative: Use native fetch inside apiCall wrapper logic? 
+            // Or just use native fetch here with manual token for the FILE UPLOAD parts only, to stay safe.
+            // But I want to use apiCall for auth handling.
+            // I'll stick to native fetch for file uploads with manual token retrieval from localStorage for now, 
+            // OR I can use apiCall but I need to make sure I can unset Content-Type.
+
+            // Let's use direct code here for safety on file uploads:
+            const token = localStorage.getItem("adminToken");
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/about`, {
                 method: "PUT",
                 headers: {
-                    Authorization: `Bearer ${token}`
+                    Authorization: `Bearer ${token}` // Manually set auth
+                    // No Content-Type header so browser sets boundary
                 },
                 body: formData
             });
 
             if (res.ok) {
                 toast.success("About Us updated successfully!");
-                // No need to clear form, we want to keep the current values
             } else {
                 toast.error("Failed to update About Us");
             }
@@ -148,6 +168,7 @@ export default function MarketingPage() {
             formData.append('linkUrl', newBanner.linkUrl);
             formData.append('image', newBanner.image);
 
+            const token = localStorage.getItem("adminToken");
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/banners`, {
                 method: "POST",
                 headers: {
@@ -174,12 +195,11 @@ export default function MarketingPage() {
     const handleDeleteBanner = async (id: number) => {
         if (!confirm("Are you sure you want to delete this banner?")) return;
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/banners/${id}`, {
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/banners/${id}`, {
                 method: "DELETE",
-                headers: { Authorization: `Bearer ${token}` }
             });
 
-            if (res.ok) {
+            if (res && res.ok) {
                 toast.success("Banner deleted");
                 setBanners(prev => prev.filter(b => b.id !== id));
             } else {
@@ -190,15 +210,17 @@ export default function MarketingPage() {
         }
     };
 
-    if (loading) return <div className="flex h-96 items-center justify-center"><Loader2 className="animate-spin" /></div>;
+    if (loading) return <div className="flex bg-slate-50 dark:bg-slate-900 justify-center p-8 h-[50vh] items-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold tracking-tight">Marketing & Content</h1>
-            <p className="text-muted-foreground">Manage homepage banners, about us content, and view newsletter subscribers.</p>
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">Marketing</h1>
+                <p className="text-slate-500 dark:text-slate-400">Manage content, banners and subscribers.</p>
+            </div>
 
             <Tabs defaultValue="banners" className="space-y-4">
-                <TabsList>
+                <TabsList className="bg-slate-100 dark:bg-slate-800 p-1">
                     <TabsTrigger value="banners">Hero Banners</TabsTrigger>
                     <TabsTrigger value="about">About Us</TabsTrigger>
                     <TabsTrigger value="subscribers">Subscribers</TabsTrigger>
@@ -206,21 +228,19 @@ export default function MarketingPage() {
 
                 <TabsContent value="banners" className="space-y-4">
                     {/* Create Banner */}
-                    <Card>
-                        <CardHeader>
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <CardTitle>Add New Banner</CardTitle>
-                                    <CardDescription>Upload a new slide for the homepage hero section.</CardDescription>
-                                </div>
-                                <Link href="/marketing/trash">
-                                    <Button variant="outline" className="text-red-500 hover:text-red-600 border-red-200">
-                                        View Trash
-                                    </Button>
-                                </Link>
+                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <div>
+                                <CardTitle className="text-lg font-medium">Add New Banner</CardTitle>
+                                <CardDescription>Upload a new slide for the homepage.</CardDescription>
                             </div>
+                            <Link href="/marketing/trash">
+                                <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600 border-red-200">
+                                    Trash
+                                </Button>
+                            </Link>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="pt-4">
                             <form onSubmit={handleCreateBanner} className="grid gap-4 md:grid-cols-2 items-end">
                                 <div className="space-y-2">
                                     <Label>Title</Label>
@@ -228,6 +248,7 @@ export default function MarketingPage() {
                                         placeholder="e.g. Summer Collection"
                                         value={newBanner.title}
                                         onChange={e => setNewBanner({ ...newBanner, title: e.target.value })}
+                                        className="h-10"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -236,6 +257,7 @@ export default function MarketingPage() {
                                         placeholder="e.g. Discover the new wave..."
                                         value={newBanner.subtitle}
                                         onChange={e => setNewBanner({ ...newBanner, subtitle: e.target.value })}
+                                        className="h-10"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -246,6 +268,7 @@ export default function MarketingPage() {
                                             accept="image/*"
                                             onChange={handleFileChange}
                                             required
+                                            className="h-10 cursor-pointer file:cursor-pointer"
                                         />
                                     </div>
                                 </div>
@@ -255,10 +278,11 @@ export default function MarketingPage() {
                                         placeholder="/products?category=Men"
                                         value={newBanner.linkUrl}
                                         onChange={e => setNewBanner({ ...newBanner, linkUrl: e.target.value })}
+                                        className="h-10"
                                     />
                                 </div>
                                 <div className="md:col-span-2">
-                                    <Button type="submit" disabled={isSubmitting}>
+                                    <Button type="submit" disabled={isSubmitting} className="w-full md:w-auto">
                                         {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
                                         Upload Banner
                                     </Button>
@@ -268,48 +292,62 @@ export default function MarketingPage() {
                     </Card>
 
                     {/* Banner List */}
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {banners.map(banner => (
-                            <Card key={banner.id} className="relative overflow-hidden group">
-                                <div className="aspect-video bg-muted relative">
-                                    <img src={banner.imageUrl} alt={banner.title} className="object-cover w-full h-full" />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <Button variant="destructive" size="sm" onClick={() => handleDeleteBanner(banner.id)}>
+                            <Card key={banner.id} className="relative overflow-hidden group border-0 shadow-md ring-1 ring-slate-200 dark:ring-slate-800">
+                                <div className="aspect-video bg-slate-100 dark:bg-slate-800 relative">
+                                    {banner.imageUrl ? (
+                                        <img src={banner.imageUrl} alt={banner.title} className="object-cover w-full h-full" />
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full text-slate-400">
+                                            <ImageIcon className="h-10 w-10" />
+                                        </div>
+                                    )}
+                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center backdrop-blur-sm">
+                                        <Button variant="destructive" size="sm" onClick={() => handleDeleteBanner(banner.id)} className="shadow-lg">
                                             <Trash className="w-4 h-4 mr-2" /> Delete
                                         </Button>
                                     </div>
                                 </div>
-                                <CardContent className="p-4">
-                                    <h3 className="font-bold truncate">{banner.title}</h3>
-                                    <p className="text-sm text-muted-foreground truncate">{banner.subtitle}</p>
-                                    <p className="text-xs text-blue-500 mt-2 truncate">{banner.linkUrl}</p>
+                                <CardContent className="p-4 bg-white dark:bg-slate-900">
+                                    <h3 className="font-bold truncate text-lg">{banner.title || "Untitled"}</h3>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{banner.subtitle || "No subtitle"}</p>
+                                    <p className="text-xs text-primary mt-3 truncate font-mono bg-primary/5 p-1 rounded w-fit px-2 max-w-full">
+                                        {banner.linkUrl || "#"}
+                                    </p>
                                 </CardContent>
                             </Card>
                         ))}
-                        {banners.length === 0 && <p className="text-muted-foreground col-span-full">No banners found.</p>}
+                        {banners.length === 0 && (
+                            <div className="col-span-full flex flex-col items-center justify-center p-12 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-lg text-slate-400">
+                                <ImageIcon className="h-10 w-10 mb-2 opacity-50" />
+                                <p>No banners uploaded yet.</p>
+                            </div>
+                        )}
                     </div>
                 </TabsContent>
 
                 <TabsContent value="about">
-                    <Card>
+                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
                         <CardHeader>
-                            <CardTitle>About Us Page Content</CardTitle>
-                            <CardDescription>Update the content displayed on the customer "About Us" page.</CardDescription>
+                            <CardTitle>About Us Content</CardTitle>
+                            <CardDescription>Update company story and details.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <form onSubmit={handleUpdateAbout} className="space-y-6 max-w-2xl">
+                            <form onSubmit={handleUpdateAbout} className="space-y-6 max-w-3xl">
                                 <div className="space-y-2">
                                     <Label>Page Title</Label>
                                     <Input
                                         value={aboutData.title}
                                         onChange={e => setAboutData({ ...aboutData, title: e.target.value })}
                                         placeholder="e.g. About Our Brand"
+                                        className="h-10 font-bold"
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Description / Story</Label>
+                                    <Label>Description</Label>
                                     <textarea
-                                        className="flex min-h-[150px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
                                         value={aboutData.description}
                                         onChange={e => setAboutData({ ...aboutData, description: e.target.value })}
                                         placeholder="Tell your brand story..."
@@ -321,9 +359,10 @@ export default function MarketingPage() {
                                         type="file"
                                         accept="image/*"
                                         onChange={handleAboutImageChange}
+                                        className="cursor-pointer"
                                     />
                                     {aboutData.imageUrl && (
-                                        <div className="mt-4 relative h-64 w-full rounded-lg overflow-hidden border">
+                                        <div className="mt-4 relative h-64 w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 shadow-inner">
                                             <img
                                                 src={aboutData.imageUrl}
                                                 alt="About Us"
@@ -332,7 +371,7 @@ export default function MarketingPage() {
                                         </div>
                                     )}
                                 </div>
-                                <Button type="submit" disabled={isSubmitting}>
+                                <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
                                     {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Save Changes"}
                                 </Button>
                             </form>
@@ -341,34 +380,41 @@ export default function MarketingPage() {
                 </TabsContent>
 
                 <TabsContent value="subscribers">
-                    <Card>
+                    <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
                         <CardHeader>
-                            <CardTitle>Newsletter Subscribers ({subscribers.length})</CardTitle>
+                            <CardTitle>Newsletter Subscribers</CardTitle>
+                            <CardDescription>Total Subscribers: {subscribers.length}</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>ID</TableHead>
-                                        <TableHead>Email</TableHead>
-                                        <TableHead>Subscribed At</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {subscribers.map(sub => (
-                                        <TableRow key={sub.id}>
-                                            <TableCell>{sub.id}</TableCell>
-                                            <TableCell>{sub.email}</TableCell>
-                                            <TableCell>{new Date(sub.subscribedAt).toLocaleDateString()}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {subscribers.length === 0 && (
+                            <div className="rounded-md border overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
                                         <TableRow>
-                                            <TableCell colSpan={3} className="text-center">No subscribers yet.</TableCell>
+                                            <TableHead className="w-[100px]">ID</TableHead>
+                                            <TableHead>Email Address</TableHead>
+                                            <TableHead className="text-right">Subscribed Date</TableHead>
                                         </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {subscribers.map(sub => (
+                                            <TableRow key={sub.id}>
+                                                <TableCell className="font-mono text-xs">{sub.id}</TableCell>
+                                                <TableCell className="font-medium">{sub.email}</TableCell>
+                                                <TableCell className="text-right text-slate-500">
+                                                    {new Date(sub.subscribedAt).toLocaleDateString()}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                        {subscribers.length === 0 && (
+                                            <TableRow>
+                                                <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                                                    No subscribers yet.
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>

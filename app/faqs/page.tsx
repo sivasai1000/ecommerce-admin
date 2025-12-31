@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash, Loader2, Plus, GripVertical } from "lucide-react";
+import { Trash, Loader2, Plus, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
     Dialog,
@@ -28,7 +27,7 @@ interface FAQ {
 }
 
 export default function FAQsPage() {
-    const { token } = useAuth();
+    const { apiCall } = useAuth();
     const [faqs, setFaqs] = useState<FAQ[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,13 +40,13 @@ export default function FAQsPage() {
     });
 
     useEffect(() => {
-        if (token) fetchFAQs();
-    }, [token]);
+        fetchFAQs();
+    }, []);
 
     const fetchFAQs = async () => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/faqs`);
-            if (res.ok) {
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/faqs`);
+            if (res && res.ok) {
                 setFaqs(await res.json());
             }
         } catch (error) {
@@ -61,16 +60,12 @@ export default function FAQsPage() {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/faqs`, {
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/faqs`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`
-                },
                 body: JSON.stringify(newFAQ)
             });
 
-            if (res.ok) {
+            if (res && res.ok) {
                 toast.success("FAQ created successfully!");
                 setNewFAQ({ question: "", answer: "" });
                 setIsDialogOpen(false);
@@ -88,12 +83,11 @@ export default function FAQsPage() {
     const handleDeleteFAQ = async (id: number) => {
         if (!confirm("Are you sure you want to delete this FAQ?")) return;
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/faqs/${id}`, {
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/faqs/${id}`, {
                 method: "DELETE",
-                headers: { Authorization: `Bearer ${token}` }
             });
 
-            if (res.ok) {
+            if (res && res.ok) {
                 toast.success("FAQ deleted");
                 setFaqs(prev => prev.filter(f => f.id !== id));
             } else {
@@ -104,14 +98,14 @@ export default function FAQsPage() {
         }
     };
 
-    if (loading) return <div className="flex h-96 items-center justify-center"><Loader2 className="animate-spin" /></div>;
+    if (loading) return <div className="flex bg-slate-50 dark:bg-slate-900 justify-center p-8 h-[50vh] items-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
+        <div className="space-y-6 max-w-5xl mx-auto">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">FAQs</h1>
-                    <p className="text-muted-foreground">Manage frequently asked questions for your store.</p>
+                    <p className="text-slate-500 dark:text-slate-400">Manage frequently asked questions.</p>
                 </div>
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
@@ -119,14 +113,14 @@ export default function FAQsPage() {
                             <Plus className="mr-2 h-4 w-4" /> Add FAQ
                         </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-[500px]">
                         <DialogHeader>
                             <DialogTitle>Add New FAQ</DialogTitle>
                             <DialogDescription>
-                                Create a new question and answer pair for the FAQ page.
+                                Create a new question and answer pair for your customers.
                             </DialogDescription>
                         </DialogHeader>
-                        <form onSubmit={handleCreateFAQ} className="space-y-4">
+                        <form onSubmit={handleCreateFAQ} className="space-y-4 pt-4">
                             <div className="space-y-2">
                                 <Label>Question</Label>
                                 <Input
@@ -134,6 +128,7 @@ export default function FAQsPage() {
                                     value={newFAQ.question}
                                     onChange={e => setNewFAQ({ ...newFAQ, question: e.target.value })}
                                     required
+                                    className="font-medium"
                                 />
                             </div>
                             <div className="space-y-2">
@@ -143,10 +138,11 @@ export default function FAQsPage() {
                                     value={newFAQ.answer}
                                     onChange={e => setNewFAQ({ ...newFAQ, answer: e.target.value })}
                                     required
+                                    className="min-h-[120px]"
                                 />
                             </div>
                             <DialogFooter>
-                                <Button type="submit" disabled={isSubmitting}>
+                                <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
                                     {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Create FAQ"}
                                 </Button>
                             </DialogFooter>
@@ -155,24 +151,42 @@ export default function FAQsPage() {
                 </Dialog>
             </div>
 
-            <Card>
+            <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
                 <CardHeader>
-                    <CardTitle>Existing FAQs</CardTitle>
+                    <CardTitle>Existing Questions</CardTitle>
+                    <CardDescription>Questions currently visible on the FAQ page.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
                         {faqs.map(faq => (
-                            <div key={faq.id} className="flex items-start justify-between p-4 border rounded-lg bg-muted/30">
-                                <div className="space-y-1">
-                                    <h3 className="font-semibold">{faq.question}</h3>
-                                    <p className="text-sm text-muted-foreground whitespace-pre-line">{faq.answer}</p>
+                            <div key={faq.id} className="flex flex-col sm:flex-row items-start justify-between p-5 border rounded-xl bg-white dark:bg-slate-900/50 hover:shadow-md transition-shadow">
+                                <div className="space-y-2 flex-1 mr-4">
+                                    <h3 className="font-semibold text-lg flex items-start gap-2">
+                                        <HelpCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                                        {faq.question}
+                                    </h3>
+                                    <div className="pl-7 text-slate-600 dark:text-slate-400 text-sm whitespace-pre-line leading-relaxed">
+                                        {faq.answer}
+                                    </div>
+                                    <p className="pl-7 text-xs text-slate-400 pt-2">Created: {new Date(faq.createdAt).toLocaleDateString()}</p>
                                 </div>
-                                <Button variant="ghost" size="sm" onClick={() => handleDeleteFAQ(faq.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50">
-                                    <Trash className="h-4 w-4" />
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleDeleteFAQ(faq.id)}
+                                    className="text-slate-400 hover:text-red-500 hover:bg-red-50 shrink-0 mt-2 sm:mt-0"
+                                >
+                                    <Trash className="h-5 w-5" />
                                 </Button>
                             </div>
                         ))}
-                        {faqs.length === 0 && <p className="text-center text-muted-foreground py-8">No FAQs found.</p>}
+                        {faqs.length === 0 && (
+                            <div className="flex flex-col items-center justify-center py-12 text-slate-400 text-center">
+                                <HelpCircle className="h-12 w-12 mb-4 opacity-20" />
+                                <p className="text-lg font-medium">No FAQs found</p>
+                                <p className="text-sm text-slate-500">Add a new question to get started.</p>
+                            </div>
+                        )}
                     </div>
                 </CardContent>
             </Card>

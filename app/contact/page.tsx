@@ -7,11 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, Mail, Phone, MapPin, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 export default function ContactPage() {
-    const { token } = useAuth();
+    const { apiCall } = useAuth();
 
     const [formData, setFormData] = useState({
         title: "",
@@ -25,25 +25,27 @@ export default function ContactPage() {
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
-        if (token) fetchPage();
-    }, [token]);
+        fetchPage();
+    }, []);
 
     const fetchPage = async () => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/contact`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.ok) {
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/contact`);
+            if (res && res.ok) {
                 const data = await res.json();
                 let parsedContent = { intro: "", email: "", phone: "", address: "", hours: "" };
                 try {
-                    parsedContent = JSON.parse(data.content);
+                    // Handle case where content might be stringified JSON or just plain text legacy
+                    parsedContent = typeof data.content === 'string' ? JSON.parse(data.content) : data.content;
                 } catch (e) {
-                    // Fallback if content was not JSON (legacy HTML)
-                    console.warn("Content is not JSON, resetting fields");
+                    console.warn("Content parsing error or legacy format", e);
                 }
+
+                // Ensure defaults
+                parsedContent = parsedContent || {};
+
                 setFormData({
-                    title: data.title,
+                    title: data.title || "",
                     intro: parsedContent.intro || "",
                     email: parsedContent.email || "",
                     phone: parsedContent.phone || "",
@@ -51,9 +53,11 @@ export default function ContactPage() {
                     hours: parsedContent.hours || ""
                 });
             } else {
-                toast.error("Contact page data not found");
+                // If 404, might just be empty, don't error toast heavily
+                console.log("Contact page data not found or init");
             }
         } catch (error) {
+            console.error(error);
             toast.error("Failed to load contact page");
         } finally {
             setLoading(false);
@@ -73,19 +77,15 @@ export default function ContactPage() {
                 hours: formData.hours
             });
 
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/contact`, {
+            const res = await apiCall(`${process.env.NEXT_PUBLIC_API_URL}/api/contact`, {
                 method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`
-                },
                 body: JSON.stringify({
                     title: formData.title,
                     content: contentJson
                 })
             });
 
-            if (res.ok) {
+            if (res && res.ok) {
                 toast.success("Contact page updated successfully");
             } else {
                 toast.error("Failed to update contact page");
@@ -97,87 +97,105 @@ export default function ContactPage() {
         }
     };
 
-    if (loading) return <div className="flex h-96 items-center justify-center"><Loader2 className="animate-spin" /></div>;
+    if (loading) return <div className="flex bg-slate-50 dark:bg-slate-900 justify-center p-8 h-[50vh] items-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
 
     return (
-        <div className="space-y-6 max-w-4xl mx-auto">
+        <div className="space-y-6 max-w-5xl mx-auto">
             <div className="flex items-center space-x-4">
-                <h1 className="text-3xl font-bold tracking-tight">Contact Us</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Contact Us Page</h1>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Edit Contact Page</CardTitle>
-                    <CardDescription>Update the details shown on the Contact Us page.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={handleSave} className="space-y-6">
-                        <div className="space-y-2">
-                            <Label>Page Title</Label>
-                            <Input
-                                value={formData.title}
-                                onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                required
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label>Intro Text</Label>
-                            <Textarea
-                                value={formData.intro}
-                                onChange={e => setFormData({ ...formData, intro: e.target.value })}
-                                placeholder="We'd love to hear from you..."
-                                className="min-h-[100px]"
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid gap-6 md:grid-cols-3">
+                <Card className="md:col-span-2 border-slate-200 dark:border-slate-800 shadow-sm">
+                    <CardHeader>
+                        <CardTitle>Edit Content</CardTitle>
+                        <CardDescription>Update the details shown on your store's contact page.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleSave} className="space-y-6">
                             <div className="space-y-2">
-                                <Label>Email</Label>
+                                <Label>Page Heading</Label>
                                 <Input
-                                    value={formData.email}
-                                    onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                    placeholder="support@example.com"
+                                    value={formData.title}
+                                    onChange={e => setFormData({ ...formData, title: e.target.value })}
+                                    required
+                                    placeholder="e.g. Get in Touch"
+                                    className="font-medium"
                                 />
                             </div>
+
                             <div className="space-y-2">
-                                <Label>Phone</Label>
-                                <Input
-                                    value={formData.phone}
-                                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                    placeholder="+1 (555) 123-4567"
+                                <Label>Introductory Text</Label>
+                                <Textarea
+                                    value={formData.intro}
+                                    onChange={e => setFormData({ ...formData, intro: e.target.value })}
+                                    placeholder="We'd love to hear from you..."
+                                    className="min-h-[120px] resize-y"
                                 />
                             </div>
-                        </div>
 
-                        <div className="space-y-2">
-                            <Label>Address</Label>
-                            <Textarea
-                                value={formData.address}
-                                onChange={e => setFormData({ ...formData, address: e.target.value })}
-                                placeholder="123 Street Name, City, Country"
-                                className="min-h-[80px]"
-                            />
-                        </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <Label className="flex items-center gap-2"><Mail className="h-4 w-4" /> Email Address</Label>
+                                    <Input
+                                        value={formData.email}
+                                        onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                        placeholder="support@example.com"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="flex items-center gap-2"><Phone className="h-4 w-4" /> Phone Number</Label>
+                                    <Input
+                                        value={formData.phone}
+                                        onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                        placeholder="+1 (555) 123-4567"
+                                    />
+                                </div>
+                            </div>
 
-                        <div className="space-y-2">
-                            <Label>Support Hours</Label>
-                            <Input
-                                value={formData.hours}
-                                onChange={e => setFormData({ ...formData, hours: e.target.value })}
-                                placeholder="Mon-Fri, 9 AM - 6 PM EST"
-                            />
-                        </div>
+                            <div className="space-y-2">
+                                <Label className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Physical Address</Label>
+                                <Textarea
+                                    value={formData.address}
+                                    onChange={e => setFormData({ ...formData, address: e.target.value })}
+                                    placeholder="123 Street Name, City, Country"
+                                    className="min-h-[80px]"
+                                />
+                            </div>
 
-                        <div className="flex justify-end">
-                            <Button type="submit" disabled={isSaving}>
-                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                Save Changes
-                            </Button>
-                        </div>
-                    </form>
-                </CardContent>
-            </Card>
+                            <div className="space-y-2">
+                                <Label className="flex items-center gap-2"><Clock className="h-4 w-4" /> Support Hours</Label>
+                                <Input
+                                    value={formData.hours}
+                                    onChange={e => setFormData({ ...formData, hours: e.target.value })}
+                                    placeholder="Mon-Fri, 9 AM - 6 PM EST"
+                                />
+                            </div>
+
+                            <div className="flex justify-end pt-4">
+                                <Button type="submit" disabled={isSaving} className="w-full sm:w-auto min-w-[150px]">
+                                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                    Save Changes
+                                </Button>
+                            </div>
+                        </form>
+                    </CardContent>
+                </Card>
+
+                {/* Preview / Info Card */}
+                <div className="space-y-6">
+                    <Card className="bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800">
+                        <CardHeader>
+                            <CardTitle className="text-sm">Preview Tips</CardTitle>
+                        </CardHeader>
+                        <CardContent className="text-sm text-slate-500 space-y-2">
+                            <p>Make sure to include country code in phone numbers.</p>
+                            <p>Addresses should be formatted as they should appear on a map.</p>
+                            <p>Emails provided here will be public to crawl bots potentially.</p>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
         </div>
     );
 }

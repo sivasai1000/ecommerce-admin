@@ -178,18 +178,11 @@ export default function ProductForm({ initialData, isEditing, productId }: Produ
             submitFormData.append('subcategory', formData.subcategory);
             submitFormData.append('discount', formData.discount || "0");
 
-            const imageOrder: (string | null)[] = [];
             imageSlots.forEach((slot, index) => {
                 if (slot instanceof File) {
                     submitFormData.append(`image${index + 1}`, slot);
-                    imageOrder.push('new');
-                } else if (typeof slot === 'string') {
-                    imageOrder.push(slot);
-                } else {
-                    imageOrder.push(null);
                 }
             });
-            submitFormData.append('imageOrder', JSON.stringify(imageOrder));
 
             const token = localStorage.getItem("adminToken");
             const response = await fetch(url, {

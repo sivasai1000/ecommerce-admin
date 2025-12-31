@@ -13,6 +13,7 @@ interface User {
 interface AuthContextType {
     user: User | null;
     token: string | null;
+    login: (token: string, user: User) => void;
     logout: () => void;
     isLoading: boolean;
     apiCall: (url: string, options?: RequestInit) => Promise<Response | null>;
@@ -43,6 +44,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         setIsLoading(false);
     }, []);
+
+    const login = (newToken: string, newUser: User) => {
+        setToken(newToken);
+        setUser(newUser);
+        localStorage.setItem("adminToken", newToken);
+        localStorage.setItem("adminUser", JSON.stringify(newUser));
+        router.push("/");
+    };
 
     const logout = () => {
         setToken(null);
@@ -82,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             value={{
                 user,
                 token,
+                login,
                 logout,
                 isLoading,
                 apiCall

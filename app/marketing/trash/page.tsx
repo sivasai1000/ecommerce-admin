@@ -12,7 +12,7 @@ export default function BannersTrashPage() {
 
     const fetchTrash = async () => {
         try {
-            const token = localStorage.getItem("token") || localStorage.getItem("adminToken");
+            const token = localStorage.getItem("adminToken");
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/banners/trash`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -35,7 +35,7 @@ export default function BannersTrashPage() {
         if (!confirm("Are you sure you want to restore this banner?")) return;
 
         try {
-            const token = localStorage.getItem("token") || localStorage.getItem("adminToken");
+            const token = localStorage.getItem("adminToken");
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/banners/restore/${id}`, {
                 method: "PUT",
                 headers: { Authorization: `Bearer ${token}` }

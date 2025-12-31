@@ -20,7 +20,7 @@ export default function CategoriesPage() {
 
     const fetchCategories = async () => {
         try {
-            const token = localStorage.getItem("token") || localStorage.getItem("adminToken");
+            const token = localStorage.getItem("adminToken");
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products/categories`, {
                 headers: { Authorization: `Bearer ${token}` }
             });

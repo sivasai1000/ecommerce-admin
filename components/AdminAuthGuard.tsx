@@ -9,8 +9,8 @@ export default function AdminAuthGuard({ children }: { children: React.ReactNode
     const [authorized, setAuthorized] = useState(false);
 
     useEffect(() => {
-        const token = localStorage.getItem("token");
-        const userStr = localStorage.getItem("user");
+        const token = localStorage.getItem("adminToken");
+        const userStr = localStorage.getItem("adminUser");
 
         // Allow access to login page without check
         if (pathname === "/login") {
@@ -29,11 +29,13 @@ export default function AdminAuthGuard({ children }: { children: React.ReactNode
                 setAuthorized(true);
             } else {
                 alert("Access Denied: Admin role required");
-                localStorage.removeItem("token"); // Clear invalid session
+                localStorage.removeItem("adminToken"); // Clear invalid session
+                localStorage.removeItem("adminUser");
                 router.push("/login");
             }
         } catch (e) {
-            localStorage.removeItem("token");
+            localStorage.removeItem("adminToken");
+            localStorage.removeItem("adminUser");
             router.push("/login");
         }
     }, [pathname, router]);

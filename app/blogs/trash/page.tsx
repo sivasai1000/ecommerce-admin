@@ -13,7 +13,7 @@ export default function BlogsTrashPage() {
 
     const fetchTrash = async () => {
         try {
-            const token = localStorage.getItem("token") || localStorage.getItem("adminToken");
+            const token = localStorage.getItem("adminToken");
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/blogs/trash`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -36,7 +36,7 @@ export default function BlogsTrashPage() {
         if (!confirm("Are you sure you want to restore this blog?")) return;
 
         try {
-            const token = localStorage.getItem("token") || localStorage.getItem("adminToken");
+            const token = localStorage.getItem("adminToken");
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/blogs/restore/${id}`, {
                 method: "PUT",
                 headers: { Authorization: `Bearer ${token}` }

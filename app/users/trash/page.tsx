@@ -14,7 +14,7 @@ export default function UsersTrashPage() {
 
     const fetchTrash = async () => {
         try {
-            const token = localStorage.getItem("token") || localStorage.getItem("adminToken");
+            const token = localStorage.getItem("adminToken");
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/trash`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -37,7 +37,7 @@ export default function UsersTrashPage() {
         if (!confirm("Are you sure you want to restore this user?")) return;
 
         try {
-            const token = localStorage.getItem("token") || localStorage.getItem("adminToken");
+            const token = localStorage.getItem("adminToken");
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/restore/${id}`, {
                 method: "PUT",
                 headers: { Authorization: `Bearer ${token}` }

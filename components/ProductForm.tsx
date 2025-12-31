@@ -181,6 +181,9 @@ export default function ProductForm({ initialData, isEditing, productId }: Produ
             imageSlots.forEach((slot, index) => {
                 if (slot instanceof File) {
                     submitFormData.append(`image${index + 1}`, slot);
+                } else if (typeof slot === 'string') {
+                    // Send existing URL as string so backend knows to keep it
+                    submitFormData.append(`image${index + 1}`, slot);
                 }
             });
 

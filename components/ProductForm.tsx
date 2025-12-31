@@ -460,7 +460,7 @@ export default function ProductForm({ initialData, isEditing, productId }: Produ
                                                 <button
                                                     type="button"
                                                     onClick={() => handleRemoveImage(index)}
-                                                    className="absolute top-1 right-1 bg-white/90 text-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-white"
+                                                    className="absolute top-1 right-1 bg-white hover:bg-red-50 text-red-500 rounded-full p-1 shadow-sm transition-colors border border-gray-200"
                                                 >
                                                     <X size={14} />
                                                 </button>

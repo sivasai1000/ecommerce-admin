@@ -179,9 +179,9 @@ export default function ProductForm({ initialData, isEditing, productId }: Produ
             submitFormData.append('discount', formData.discount || "0");
 
             const imageOrder: (string | null)[] = [];
-            imageSlots.forEach(slot => {
+            imageSlots.forEach((slot, index) => {
                 if (slot instanceof File) {
-                    submitFormData.append('images', slot);
+                    submitFormData.append(`image${index + 1}`, slot);
                     imageOrder.push('new');
                 } else if (typeof slot === 'string') {
                     imageOrder.push(slot);

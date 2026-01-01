@@ -1,42 +1,52 @@
+"use client";
+
 import Link from "next/link";
 import { Facebook, Instagram, Twitter, Mail, MapPin, Phone } from "lucide-react";
+import { useEffect, useState } from "react";
 
-export default async function Footer() {
-    let contactInfo = {
+export default function Footer() {
+    const [contactInfo, setContactInfo] = useState({
         address: "123 Fashion Ave, New York, NY 10001",
         phone: "+1 (555) 123-4567",
         email: "support@FUNSTORE.com"
-    };
+    });
+    const [categories, setCategories] = useState([]);
 
-    let categories = [];
-    try {
-        const [contactRes, catRes] = await Promise.all([
-            fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/contact`, { cache: 'no-store' }),
-            fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products/categories`, { next: { revalidate: 3600 } })
-        ]);
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [contactRes, catRes] = await Promise.all([
+                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/contact`, { cache: 'no-store' }),
+                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products/categories`, { next: { revalidate: 3600 } })
+                ]);
 
-        if (contactRes.ok) {
-            const data = await contactRes.json();
-            if (data && data.content) {
-                let parsed = data.content;
-                if (typeof parsed === 'string') {
-                    try { parsed = JSON.parse(parsed); } catch (e) { }
+                if (contactRes.ok) {
+                    const data = await contactRes.json();
+                    if (data && data.content) {
+                        let parsed = data.content;
+                        if (typeof parsed === 'string') {
+                            try { parsed = JSON.parse(parsed); } catch (e) { }
+                        }
+
+                        setContactInfo({
+                            address: parsed.address || "123 Fashion Ave, New York, NY 10001",
+                            phone: parsed.phone || "+1 (555) 123-4567",
+                            email: parsed.email || "support@FUNSTORE.com"
+                        });
+                    }
                 }
 
-                contactInfo = {
-                    address: parsed.address || contactInfo.address,
-                    phone: parsed.phone || contactInfo.phone,
-                    email: parsed.email || contactInfo.email
-                };
+                if (catRes.ok) {
+                    const params = await catRes.json();
+                    setCategories(params || []);
+                }
+            } catch (err) {
+                console.error("Failed to fetch footer data", err);
             }
-        }
+        };
 
-        if (catRes.ok) {
-            categories = await catRes.json();
-        }
-    } catch (err) {
-        console.error("Failed to fetch footer data", err);
-    }
+        fetchData();
+    }, []);
 
     return (
         <footer className="bg-stone-100 dark:bg-stone-950 text-stone-600 dark:text-stone-400 py-16 border-t border-stone-200 dark:border-stone-800">

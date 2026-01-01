@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import MobileNav from "@/components/MobileNav";
+import Footer from "@/components/Footer";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
@@ -29,10 +30,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             <Sidebar />
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto h-[calc(100vh-73px)] md:h-screen p-4 md:p-8 bg-slate-50 dark:bg-slate-900/50">
-                <div className="mx-auto max-w-7xl animate-in fade-in duration-500 slide-in-from-bottom-2">
-                    {children}
+            <main className="flex-1 overflow-y-auto h-[calc(100vh-73px)] md:h-screen bg-slate-50 dark:bg-slate-900/50 flex flex-col">
+                <div className="flex-1 p-4 md:p-8">
+                    <div className="mx-auto max-w-7xl animate-in fade-in duration-500 slide-in-from-bottom-2">
+                        {children}
+                    </div>
                 </div>
+                <Footer />
             </main>
         </div>
     );
